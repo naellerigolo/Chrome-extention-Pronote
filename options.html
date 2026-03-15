@@ -1,0 +1,1653 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Study Plan Windows</title>
+    <style>
+      :root {
+        --bg: #020817;
+        --bg-soft: #0f172a;
+        --card: #111827;
+        --card-soft: #1e293b;
+        --accent: #2563eb;
+        --accent-soft: rgba(37, 99, 235, 0.18);
+        --accent-alt: #22c55e;
+        --danger: #f87171;
+        --text: #e5e7eb;
+        --text-soft: #9ca3af;
+        --border: rgba(148, 163, 253, 0.16);
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+        --shadow-soft: 0 14px 40px rgba(15, 23, 42, 0.6);
+        --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.5);
+        --transition-fast: 0.16s ease-out;
+        --font: system-ui, -apple-system, BlinkMacSystemFont, -apple-system,
+          "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 24px;
+        max-width: 100%;
+        overflow-x: hidden;
+        /* Hide scrollbar while keeping scroll behavior */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        font-family: var(--font);
+        background:
+          radial-gradient(circle at top, rgba(15, 23, 42, 0.9), transparent),
+          radial-gradient(circle at bottom, rgba(15, 23, 42, 0.85), transparent),
+          var(--bg);
+        color: var(--text);
+      }
+
+      body::-webkit-scrollbar {
+        display: none;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 22px 0 8px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      p.hint {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--text-soft);
+      }
+
+      .section {
+        margin-bottom: 24px;
+      }
+
+      .pill-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 1);
+        border: 1px solid rgba(148, 163, 253, 0.2);
+        font-size: 10px;
+        color: var(--text-soft);
+        margin-bottom: 8px;
+      }
+
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .chip-green {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 500;
+        background: rgba(22, 163, 74, 0.12);
+        color: var(--accent-alt);
+        margin-top: 4px;
+      }
+
+      .chip-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--accent-alt);
+      }
+
+      button {
+        border: none;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-weight: 500;
+        font-family: var(--font);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition:
+          background var(--transition-fast),
+          box-shadow var(--transition-fast),
+          transform var(--transition-fast),
+          border-color var(--transition-fast),
+          color var(--transition-fast);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 12px 26px rgba(37, 99, 235, 0.42);
+      }
+
+      button.primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 36px rgba(37, 99, 235, 0.5);
+      }
+
+      button.secondary {
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+
+      button.secondary:hover {
+        background: var(--card-soft);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.7);
+      }
+
+      .btn {
+        border-radius: 999px;
+        padding: 10px 20px;
+        font-weight: 600;
+        border: 1px solid transparent;
+      }
+
+      .btn-primary {
+        background: linear-gradient(120deg, rgba(22, 163, 74, 0.95), rgba(34, 197, 94, 0.85));
+        color: #ffffff;
+        border-color: rgb(34, 197, 94);
+        box-shadow: 0 14px 28px rgba(22, 163, 74, 0.35);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 36px rgba(37, 99, 235, 0.5);
+      }
+
+      .btn-ghost {
+        background: rgba(148, 163, 253, 0.08);
+        color: #e0e7ff;
+        border-color: rgba(148, 163, 253, 0.4);
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+      }
+
+      .btn-ghost:hover {
+        transform: translateY(-1px);
+        background: rgba(148, 163, 253, 0.16);
+        border-color: rgba(99, 102, 241, 0.6);
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .tab-switcher {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin: 8px 0 14px;
+      }
+
+      .tab-btn {
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 253, 0.35);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text-soft);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background var(--transition-fast),
+          color var(--transition-fast),
+          box-shadow var(--transition-fast),
+          transform var(--transition-fast);
+      }
+
+      .tab-btn:hover {
+        color: #fff;
+        border-color: rgba(99, 102, 241, 0.7);
+        transform: translateY(-1px);
+      }
+
+      .tab-btn.active {
+        background: linear-gradient(120deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.28));
+        color: #fff;
+        border-color: rgba(59, 130, 246, 0.9);
+        box-shadow: 0 10px 26px rgba(37, 99, 235, 0.3);
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .lang-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        color: var(--text-soft);
+        font-size: 12px;
+      }
+
+      .lang-picker label {
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .lang-picker select {
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.35);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        padding: 6px 10px;
+        font-size: 13px;
+        min-width: 160px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+
+      .status-inline {
+        font-size: 13px;
+        color: var(--text-soft);
+      }
+
+      /* Homework overview */
+
+      .overview-shell {
+        margin-top: 8px;
+      }
+
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        width: 100%;
+      }
+
+      .col {
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent),
+          radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.06), transparent),
+          var(--card);
+        border-radius: var(--radius-lg);
+        padding: 14px 14px 10px;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition:
+          transform var(--transition-fast),
+          box-shadow var(--transition-fast),
+          border-color var(--transition-fast),
+          background var(--transition-fast);
+      }
+
+      .col:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+        border-color: rgba(37, 99, 235, 0.4);
+      }
+
+      .col-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .col-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .count-badge {
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      /* Software page */
+      .software-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .software-category {
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent),
+          radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.06), transparent),
+          var(--card);
+        border-radius: var(--radius-lg);
+        padding: 14px 14px 12px;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .software-category h3 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--text);
+      }
+
+      .software-app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .software-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 6px 0 12px;
+      }
+
+      .software-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .software-filter-btn {
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 11px;
+        border: 1px solid rgba(148, 163, 253, 0.25);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .software-filter-btn.active {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+        border-color: rgba(37, 99, 235, 0.45);
+      }
+
+      .software-app-card {
+        background: var(--card-soft);
+        border-radius: 14px;
+        padding: 12px 10px;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+        text-decoration: none;
+      }
+
+      .software-app-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(37, 99, 235, 0.4);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.45);
+      }
+
+      .software-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 253, 0.25);
+      }
+
+      .software-icon-fallback {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: #e2e8f0;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.55), rgba(15, 23, 42, 0.9));
+        border: 1px solid rgba(148, 163, 253, 0.25);
+      }
+
+      .software-app-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+      }
+
+      .software-app-use {
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--text-soft);
+        line-height: 1.3;
+      }
+
+      .software-link-inline {
+        color: #e2e8f0;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      .software-link-inline:hover {
+        color: #ffffff;
+        text-decoration: underline;
+      }
+
+      .techniques-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .technique-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .technique-detail-content {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 480px);
+        gap: 18px;
+        align-items: start;
+      }
+
+      @media (max-width: 900px) {
+        .technique-detail-content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .technique-detail .technique-card {
+        cursor: default;
+      }
+
+      .technique-video-panel {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .technique-video-panel .technique-video-thumb {
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+      }
+
+      .technique-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 16px;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .technique-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #f8fafc;
+      }
+
+      .technique-desc {
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(226, 232, 240, 0.75);
+      }
+
+      .technique-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .technique-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      .technique-text {
+        font-size: 12px;
+        line-height: 1.45;
+        color: rgba(226, 232, 240, 0.78);
+      }
+
+      .technique-card {
+        cursor: pointer;
+      }
+
+      .technique-details {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .technique-card.expanded .technique-details {
+        display: flex;
+      }
+
+      .technique-detail .technique-details {
+        display: flex;
+      }
+
+      .technique-video-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+      }
+
+      .technique-video-thumb {
+        width: 180px;
+        height: auto;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.45);
+      }
+
+      .item {
+        position: relative;
+        background: var(--card-soft);
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(148, 163, 253, 0.16);
+        padding: 9px 10px 8px;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        cursor: pointer;
+      }
+
+      .subject {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        word-break: break-word;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+      }
+
+      .badge-homework {
+        background: rgba(22, 163, 74, 0.2);
+        color: #4ade80;
+        border-color: rgba(22, 163, 74, 0.45);
+      }
+
+      .badge-test {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f97373;
+        border-color: rgba(239, 68, 68, 0.45);
+      }
+
+      .notes {
+        font-size: 11px;
+        color: var(--text-soft);
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      /* Item layout tweaks */
+      .item-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .item-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+      }
+
+      .item-due {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .main-type-badge {
+        cursor: pointer;
+      }
+
+      .pill-select-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(148, 163, 253, 0.18);
+      }
+
+      .pill-label {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+      }
+
+      .pill-select {
+        border: none;
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 11px;
+        padding: 0 2px;
+        outline: none;
+        appearance: none;
+      }
+
+      .pill-select option {
+        color: #0f172a;
+      }
+
+      .delete-x {
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 2px;
+      }
+
+      .delete-x:hover {
+        color: #f97373;
+        transform: translateY(-1px);
+      }
+
+      .link-config {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .link-config input {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        padding: 6px 8px;
+        background: rgba(2, 6, 23, 0.96);
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .study-button-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+        flex: 0 0 auto;
+      }
+
+      .study-btn {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(15, 23, 42, 0.98);
+        color: var(--text-soft);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+      }
+
+      .study-btn-icon {
+        font-size: 16px;
+        line-height: 1;
+      }
+
+      .study-btn:hover {
+        border-color: rgba(37, 99, 235, 0.8);
+        color: #e0e7ff;
+        transform: translateY(-1px);
+      }
+
+      .details-btn {
+        border: 1px solid rgba(148, 163, 253, 0.5);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.95);
+        color: var(--text-soft);
+        padding: 4px 10px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+
+      .details-btn:hover {
+        color: #fff;
+        border-color: rgba(37, 99, 235, 0.8);
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+      }
+
+      .modal.hidden {
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+      }
+
+      .modal-card {
+        position: relative;
+        background: #0b1123;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.8);
+        z-index: 1;
+        max-width: 420px;
+        width: min(90vw, 420px);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* Wide modals (onboarding) */
+      .modal-card.ob-wide {
+        width: min(96vw, 1400px);
+        max-width: 1400px;
+        min-width: 900px;
+        max-height: 90vh;
+        overflow: hidden;
+      }
+
+      @media (max-width: 980px) {
+        .modal-card.ob-wide {
+          width: 95vw;
+          min-width: 0;
+        }
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: var(--text-soft);
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .modal-meta {
+        font-size: 12px;
+        color: var(--text-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .modal-estimate {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .modal-notes {
+        margin: 0;
+        color: var(--text);
+        line-height: 1.5;
+        font-size: 13px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      .modal-links {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+        margin-top: 8px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      .modal-links a {
+        color: var(--accent);
+        text-decoration: none;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      /* Recurring events */
+      .hidden { display:none !important; }
+      .recurring-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .recurring-form input[type="text"],
+      .recurring-form input[type="time"],
+      .recurring-form input[type="number"] {
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(9, 13, 30, 0.9);
+        color: #e2e8f0;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .rec-time-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .rec-time-block {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1 1 160px;
+      }
+      .rec-time-label {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .rec-duration-dual {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .rec-days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .rec-list {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .rec-card {
+        background: var(--card-soft);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px;
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .rec-info { display:flex; flex-direction:column; gap:2px; }
+      .rec-title { font-weight:700; font-size:14px; }
+      .rec-meta { font-size:12px; color: var(--text-soft); }
+      .rec-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .rec-skip-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .rec-skip-input {
+        width: 70px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(9, 13, 30, 0.9);
+        color: #e2e8f0;
+        padding: 6px 8px;
+        font-size: 13px;
+      }
+
+      /* Calendar view */
+      .cal-header {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(2, 8, 23, 0.96);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        box-shadow: 0 18px 32px rgba(0,0,0,0.35);
+        margin-bottom: 14px;
+      }
+      .cal-header.floating {
+        position: fixed;
+        top: 16px;
+        left: 24px;
+        right: 24px;
+        z-index: 400;
+        margin-bottom: 0;
+      }
+      .cal-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cal-week-label {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+      }
+      .cal-nav-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .cal-shell {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: 12px;
+        overflow: visible;
+      }
+      .cal-grid {
+        display: grid;
+        grid-template-columns: 60px repeat(7, 1fr);
+        gap: 6px;
+        position: relative;
+        min-height: 1200px;
+        overflow: visible;
+      }
+      .cal-time-col {
+        display: flex;
+        flex-direction: column;
+        min-height: 1200px;
+      }
+      .cal-time {
+        position: absolute;
+        left: 0px;
+        font-size: 10px;
+        color: var(--text-soft);
+      }
+      .cal-day {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 1200px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(148, 163, 253, 0.15);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .cal-day-header {
+        padding: 8px 10px;
+        font-weight: 600;
+        color: var(--text);
+        border-bottom: 1px solid rgba(148, 163, 253, 0.12);
+        background: rgba(255,255,255,0.02);
+      }
+      .cal-day-body {
+        position: relative;
+        flex: 1;
+        min-height: 1000px;
+      }
+      .cal-time-header {
+        height: 40px;
+        flex-shrink: 0;
+      }
+      .cal-time-body {
+        position: relative;
+        flex: 1;
+        min-height: 1000px;
+      }
+      .cal-slot {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        border-radius: 10px;
+        padding: 6px 8px;
+        color: #fff;
+        font-size: 11px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        overflow: hidden;
+        cursor: default;
+        user-select: none;
+      }
+      .cal-slot.clickable { cursor: pointer; }
+      .cal-slot.draggable { cursor: grab; }
+      .cal-slot.dragging { opacity: 0.9; box-shadow: 0 12px 28px rgba(0,0,0,0.45); }
+      .cal-slot.drag-source { opacity: 0.35; }
+      .cal-slot-handle {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 10px;
+        opacity: 0.7;
+        cursor: grab;
+        user-select: none;
+        letter-spacing: 1px;
+      }
+      .cal-slot.hw { background: linear-gradient(135deg, rgba(37, 99, 235, 0.72), rgba(59, 130, 246, 0.6)); }
+      .cal-slot.rec { background: linear-gradient(135deg, rgba(34, 197, 94, 0.7), rgba(16, 185, 129, 0.7)); }
+      .cal-slot-title { font-weight: 700; font-size: 12px; }
+      .cal-slot-meta { font-size: 10px; opacity: 0.9; }
+      .cal-legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .cal-legend .dot {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cal-legend .dot::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .cal-legend .dot.hw::before { background: rgba(59, 130, 246, 0.9); }
+      .cal-legend .dot.rec::before { background: rgba(34, 197, 94, 0.9); }
+      .cal-legend .dot.gcal::before { background: rgba(244, 162, 97, 0.95); }
+      .cal-legend .dot.plan::before { background: rgba(168, 85, 247, 0.9); }
+      #cal-sentinel {
+        position: relative;
+        height: 1px;
+        margin-top: -1px;
+      }
+      #section-calendar {
+        position: relative;
+        padding-top: 12px;
+        overflow: visible;
+      }
+      #section-calendar.floating-pad {
+        padding-top: 120px; /* leaves space when header is fixed */
+      }
+
+      .modal-footer {
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      .modal-controls {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .modal-controls select,
+      .modal-controls input {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(2, 6, 23, 0.95);
+        color: var(--text);
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+
+      .toast-host {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1200;
+      }
+
+      .toast {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(148, 163, 253, 0.3);
+        color: #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        max-width: 280px;
+        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+        opacity: 0;
+        transform: translateY(8px);
+        animation: toast-in 160ms ease forwards;
+      }
+
+      .toast.success {
+        border-color: rgba(34, 197, 94, 0.55);
+      }
+
+      .toast.error {
+        border-color: rgba(248, 113, 113, 0.6);
+        color: #fecaca;
+      }
+
+      .toast.out {
+        animation: toast-out 160ms ease forwards;
+      }
+
+      @keyframes toast-in {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes toast-out {
+        to { opacity: 0; transform: translateY(8px); }
+      }
+
+      .ai-login-error {
+        min-height: 16px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .ai-login-error.err {
+        color: #fca5a5;
+      }
+
+      /* AI tutor */
+      .ai-shell {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 100%;
+      }
+
+      #section-ai {
+        width: calc(100% + 48px);
+        margin-left: -24px;
+        margin-right: -24px;
+        padding: 24px;
+        min-height: calc(100vh - 140px);
+        display: flex;
+      }
+
+      #section-ai .section {
+        max-width: none;
+        margin: 0 auto;
+        width: 100%;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #section-ai h1 {
+        text-align: center;
+        font-size: 22px;
+        margin: 6px 0 8px;
+      }
+
+      #section-ai .hint {
+        text-align: center;
+      }
+
+      .ai-status-row {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .ai-key-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .ai-key-row label {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .ai-key-row input {
+        flex: 1 1 260px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(9, 13, 30, 0.9);
+        color: #e2e8f0;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+
+      .ai-messages {
+        min-height: 240px;
+        max-height: none;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding-right: 4px;
+        flex: 1 1 auto;
+      }
+
+      .ai-msg {
+        max-width: 85%;
+        padding: 8px 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .ai-msg h3 {
+        font-size: 14px;
+        margin: 0 0 6px;
+      }
+
+      .ai-msg h4 {
+        font-size: 13px;
+        margin: 0 0 6px;
+      }
+
+      .ai-msg p {
+        margin: 0 0 6px;
+      }
+
+      .ai-msg ul,
+      .ai-msg ol {
+        margin: 0 0 6px 18px;
+        padding: 0;
+      }
+
+      .ai-msg li {
+        margin: 0 0 4px;
+      }
+
+      .ai-msg code {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 253, 0.2);
+        border-radius: 6px;
+        padding: 1px 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+      }
+
+      .ai-msg pre {
+        margin: 0 0 8px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 253, 0.2);
+        border-radius: 8px;
+        padding: 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+
+      .ai-msg blockquote {
+        margin: 0 0 8px;
+        padding-left: 10px;
+        border-left: 3px solid rgba(148, 163, 253, 0.35);
+        color: #cbd5f5;
+      }
+
+      .ai-msg.user {
+        align-self: flex-end;
+        background: rgba(37, 99, 235, 0.18);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+      }
+
+      .ai-msg.bot {
+        align-self: flex-start;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(148, 163, 253, 0.2);
+      }
+
+      .ai-input-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 253, 0.35);
+        background: rgba(9, 13, 30, 0.92);
+        box-shadow: 0 10px 24px rgba(3, 7, 18, 0.35);
+        position: sticky;
+        bottom: 20px;
+        z-index: 5;
+      }
+
+      .ai-input {
+        min-height: 44px;
+        max-height: 140px;
+        resize: none;
+        border-radius: 999px;
+        border: none;
+        background: transparent;
+        color: #e2e8f0;
+        padding: 10px 12px;
+        font-size: 13px;
+        flex: 1 1 auto;
+      }
+
+      .ai-input:focus {
+        outline: none;
+      }
+
+      .ai-input-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+        align-items: center;
+      }
+
+      .ai-input-actions button {
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="top-bar">
+      <div class="study-button-row">
+        <button id="open-study-duration-page" class="study-btn" type="button" aria-label="Study time rules">
+          <span class="study-btn-icon">⚙️</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-switcher">
+      <button id="tab-homework" class="tab-btn active" type="button" aria-controls="section-homework" data-i18n="tabHomework">Homework</button>
+      <button id="tab-recurring" class="tab-btn" type="button" aria-controls="section-recurring" data-i18n="tabRecurring">Recurring events</button>
+      <button id="tab-calendar" class="tab-btn" type="button" aria-controls="section-calendar" data-i18n="tabCalendar">Calendar</button>
+      <button id="tab-software" class="tab-btn" type="button" aria-controls="section-software" data-i18n="tabSoftware">Software</button>
+      <button id="tab-techniques" class="tab-btn" type="button" aria-controls="section-techniques" data-i18n="tabTechniques">Techniques</button>
+    </div>
+
+    <div id="section-homework">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          PRONOTE Planner Overview
+        </div>
+        <h1 data-i18n="hwTitle">Homework Overview</h1>
+        <p class="hint" data-i18n="hwHint">
+          Snapshot of your stored homework (merged from page and logic). Upcoming items
+          are grouped by due date so you can quickly adjust type & difficulty.
+        </p>
+        <div class="button-row">
+          <button id="delete-all-items" class="btn btn-ghost" type="button" data-i18n="btnDeleteAll">Delete all homework & tests</button>
+          <button id="view-deleted-items" class="btn btn-ghost" type="button" data-i18n="btnViewDeleted">View deleted items</button>
+        </div>
+        <div id="overview" class="overview-shell">
+          <div class="overview-grid"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="section-calendar" class="hidden">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="calPill">Calendar</span>
+        </div>
+        <h1 data-i18n="calTitle">Your calendar</h1>
+        <p class="hint" data-i18n="calHint">Week view of your homework and recurring events.</p>
+        <div id="cal-sentinel"></div>
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button id="cal-prev" class="cal-nav-btn" type="button">←</button>
+            <div id="cal-week-label" class="cal-week-label"></div>
+            <button id="cal-next" class="cal-nav-btn" type="button">→</button>
+          </div>
+          <div class="cal-legend">
+            <span class="dot plan" data-i18n="legendPlan">Study plan</span>
+            <span class="dot hw" data-i18n="legendHw">Homework</span>
+            <span class="dot rec" data-i18n="legendRec">Recurring</span>
+          </div>
+        </div>
+        <div class="button-row" style="margin:10px 0;">
+          <button id="cal-refresh" class="btn btn-ghost" type="button" data-i18n="calUpdate">Update calendar</button>
+          <button id="cal-clear" class="btn btn-ghost" type="button" data-i18n="calClear">Clear calendar</button>
+        </div>
+        <div class="cal-shell">
+          <div id="cal-grid" class="cal-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-software" class="hidden">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="softwarePill">Software</span>
+        </div>
+        <h1 data-i18n="softwareTitle">Best free student software</h1>
+        <p class="hint" data-i18n="softwareHint">Web-only tools that are free and useful for high school.</p>
+        <div class="software-controls">
+          <div id="software-filters" class="software-filters"></div>
+        </div>
+        <div id="software-grid" class="software-grid"></div>
+      </div>
+    </div>
+
+    <div id="section-techniques" class="hidden">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="techniquesPill">Techniques</span>
+        </div>
+        <h1 data-i18n="techniquesTitle">Learning techniques</h1>
+        <p class="hint" data-i18n="techniquesHint">Simple methods students can use to study smarter.</p>
+        <div id="techniques-grid" class="techniques-grid"></div>
+        <div id="technique-detail" class="technique-detail hidden">
+          <button id="technique-back" class="btn btn-ghost" type="button" data-i18n="techniqueBack">Back</button>
+          <div class="technique-detail-content">
+            <div class="technique-card">
+              <div id="technique-detail-title" class="technique-title"></div>
+              <div class="technique-details" style="display:flex;"></div>
+            </div>
+            <div id="technique-video-panel" class="technique-video-panel hidden"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="homework-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <button id="modal-close" class="modal-close">&times;</button>
+        <h2 class="modal-title" id="modal-subject"></h2>
+        <div class="modal-meta">
+          <span id="modal-due"></span>
+          <span>·</span>
+          <span id="modal-type"></span>
+        </div>
+        <div class="modal-estimate" id="modal-estimate"></div>
+        <p class="modal-notes" id="modal-notes"></p>
+        <div id="modal-links" class="modal-links"></div>
+        <div class="modal-controls">
+          <label>
+            <span data-i18n="labelDifficulty">Difficulty</span>
+            <select id="modal-difficulty-select">
+              <option value="easy" data-i18n="diffEasy">Easy</option>
+              <option value="medium" data-i18n="diffMedium">Medium</option>
+              <option value="hard" data-i18n="diffHard">Hard</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="labelMinutes">Minutes</span>
+            <input id="modal-minutes-input" type="number" min="5" placeholder="auto" data-i18n-placeholder="phAuto" />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="plan-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <button id="plan-modal-close" class="modal-close">&times;</button>
+        <h2 class="modal-title" id="plan-modal-title" data-i18n="planMove">Move study session</h2>
+        <div class="modal-controls">
+          <label>
+            <span data-i18n="planDate">Date</span>
+            <input id="plan-modal-date" type="date" />
+          </label>
+          <label>
+            <span data-i18n="planTime">Start time</span>
+            <input id="plan-modal-time" type="time" />
+          </label>
+        </div>
+        <div class="button-row" style="margin-top:8px;">
+          <button id="plan-modal-save" class="primary" type="button" data-i18n="planSave">Save</button>
+          <button id="plan-modal-reset" class="secondary" type="button" data-i18n="planReset">Reset to auto</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-recurring" class="hidden">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="recPill">Recurring Events</span>
+        </div>
+        <h1 data-i18n="recTitle">Set recurring events</h1>
+        <p class="hint" data-i18n="recHint">Add things like “Gym” every weekday at 6:30 PM. They are saved locally.</p>
+        <button id="rec-new" class="btn btn-primary" type="button" style="gap:6px; margin-bottom:10px;">
+          <span style="font-weight:700;font-size:16px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.35); line-height:1;">+</span>
+          <span data-i18n="recButton">Create new recurring event</span>
+        </button>
+        <div id="rec-list" class="rec-list"></div>
+      </div>
+    </div>
+
+    <div id="recurring-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <button id="rec-modal-close" class="modal-close">&times;</button>
+        <h2 class="modal-title" data-i18n="recModalTitle">New recurring event</h2>
+        <div class="recurring-form">
+          <input id="rec-title" type="text" placeholder="Event name (e.g., Gym)" data-i18n-placeholder="recPlaceholder" />
+          <div class="rec-time-row">
+            <div class="rec-time-block">
+              <div class="rec-time-label" data-i18n="recStart">Start time</div>
+              <input id="rec-time" type="time" />
+            </div>
+            <div class="rec-time-block">
+              <div class="rec-time-label" data-i18n="recDuration">Duration (hours & minutes)</div>
+              <div class="rec-duration-dual">
+                <input id="rec-duration-hours" type="number" min="0" max="12" placeholder="H" />
+                <input id="rec-duration-minutes" type="number" min="0" max="59" placeholder="M" />
+              </div>
+            </div>
+          </div>
+          <div class="rec-days">
+            <label><input type="checkbox" value="1" /><span data-i18n="mon">Mon</span></label>
+            <label><input type="checkbox" value="2" /><span data-i18n="tue">Tue</span></label>
+            <label><input type="checkbox" value="3" /><span data-i18n="wed">Wed</span></label>
+            <label><input type="checkbox" value="4" /><span data-i18n="thu">Thu</span></label>
+            <label><input type="checkbox" value="5" /><span data-i18n="fri">Fri</span></label>
+            <label><input type="checkbox" value="6" /><span data-i18n="sat">Sat</span></label>
+            <label><input type="checkbox" value="0" /><span data-i18n="sun">Sun</span></label>
+          </div>
+          <button id="rec-add" class="btn btn-primary" type="button" data-i18n="recSave">Save recurring event</button>
+          <div id="rec-status" class="status-inline"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="deleted-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <button id="deleted-close" class="modal-close">&times;</button>
+        <h2 class="modal-title" data-i18n="deletedTitle">Deleted items</h2>
+        <div id="deleted-list" class="modal-notes" style="max-height:320px;overflow:auto;"></div>
+      </div>
+    </div>
+
+    <div id="toast-host" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="options.js?v=20250116c8"></script>
+  </body>
+</html>

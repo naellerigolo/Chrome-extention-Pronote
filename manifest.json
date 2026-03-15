@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "PRONOTE Auto Homework & Study Plan (Lite)",
+  "version": "1.4.0",
+  "description": "On PRONOTE student page load, extract the homework block and generate a simple study plan.",
+  "permissions": ["downloads", "storage", "unlimitedStorage", "tabs", "alarms", "identity"],
+  "host_permissions": [
+    "https://*.index-education.net/pronote/*",
+    "https://www.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "888131919855-990khga7t4dp0rdmm95thgt35oj2jra9.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/calendar.app.created"]
+  },
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://*.index-education.net/pronote/*"],
+      "js": ["click_capture.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://*.index-education.net/pronote/*"],
+      "js": ["scanner.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "incognito": "spanning",
+  "action": {
+    "default_title": "PRONOTE Auto Homework & Study Plan (Lite)",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16":"Icon/Logo_16.png",
+    "32":"Icon/Logo_32.png",
+    "64":"Icon/Logo_64.png",
+    "128":"Icon/Logo_128.png"
+  }
+  
+}

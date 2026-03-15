@@ -1,0 +1,498 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PRONOTE Planner</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --bg-soft: #111827;
+        --accent: #2563eb;
+        --accent-soft: rgba(37, 99, 235, 0.14);
+        --accent-alt: #22c55e;
+        --border-subtle: rgba(148, 163, 253, 0.22);
+        --text-main: #e5e7eb;
+        --text-soft: #9ca3af;
+        --radius-xl: 26px;
+        --radius-md: 12px;
+        --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.42);
+        --transition-fast: 0.16s ease-out;
+        --font: system-ui, -apple-system, BlinkMacSystemFont, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        margin: 0;
+        padding: 0;
+        background: #020617;
+        overflow: hidden;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        min-width: 240px;
+        max-width: 320px;
+        font-family: var(--font);
+        background: radial-gradient(circle at top, #111827, #020617);
+        color: var(--text-main);
+        overflow: hidden;
+      }
+
+      .wrapper {
+        background: linear-gradient(to bottom right, rgba(15,23,42,0.98), rgba(9,9,11,0.98));
+        padding: 10px 10px 8px;
+        border: 1px solid var(--border-subtle);
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .title-block {
+        display: flex;
+        flex-direction: column;
+      }
+
+      h1 {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin: 0;
+      }
+
+      .subtitle {
+        font-size: 10px;
+        color: var(--text-soft);
+      }
+
+      .pill {
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 9px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+
+      .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .group-label {
+        font-size: 9px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--text-soft);
+        margin: 6px 2px 2px;
+      }
+
+      .button-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+
+      button {
+        all: unset;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        border: 1px solid transparent;
+        background: rgba(15,23,42,0.94);
+        color: var(--text-main);
+        transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+        text-align: center;
+        gap: 6px;
+        min-height: 26px;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      button.primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(37, 99, 235, 0.42);
+      }
+
+      button.secondary {
+        background: rgba(15,23,42,0.96);
+        border-color: rgba(148, 163, 253, 0.16);
+      }
+
+      button.secondary:hover {
+        background: #020817;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(15,23,42,0.46);
+        border-color: var(--accent-soft);
+      }
+
+      button.ghost {
+        background: transparent;
+        border-color: rgba(75,85,99,0.5);
+        color: var(--text-soft);
+      }
+
+      button.ghost:hover {
+        background: rgba(15,23,42,0.96);
+        color: var(--text-main);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(15,23,42,0.4);
+      }
+
+      .mini-links {
+        display: flex;
+        justify-content: center;
+        font-size: 10px;
+        margin-bottom: 0;
+        gap: 6px;
+      }
+
+      .mini-links a,
+      .mini-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        height: auto;
+        padding: 2px;
+        border: none;
+        background: none;
+        border-radius: 0;
+      }
+
+      .mini-links a:hover,
+      .mini-link:hover {
+        background: none;
+        border: none;
+      }
+
+      .link-icon {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+      }
+
+      #schedule-icon,
+      #google-icon{
+        width: 64px;
+        height: 64px;
+      }
+      #pronote-icon {
+        width: 90px;
+        height: 90px;
+      }
+
+      .reminder-shell {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: var(--radius-md);
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(148, 163, 253, 0.25);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .reminder-form {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .reminder-form input,
+      .reminder-form textarea,
+      .reminder-form select {
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(9, 9, 20, 0.85);
+        color: #fff;
+        padding: 6px 8px;
+        font-family: var(--font);
+        font-size: 12px;
+      }
+
+      .reminder-form textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+
+      .reminder-date-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        border-radius: 10px;
+        background: rgba(37, 99, 235, 0.05);
+      }
+
+      .reminder-date-slot {
+        position: relative;
+      }
+
+      .reminder-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .reminder-toggle input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
+      #reminder-weekday.hidden {
+        display: none;
+      }
+
+      #reminder-weekday {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image:
+          linear-gradient(45deg, transparent 50%, #9ca3af 50%),
+          linear-gradient(135deg, #9ca3af 50%, transparent 50%),
+          linear-gradient(to right, transparent, transparent);
+        background-position:
+          calc(100% - 18px) calc(50% - 3px),
+          calc(100% - 12px) calc(50% - 3px),
+          calc(100% - 36px) 50%;
+        background-size: 6px 6px, 6px 6px, 1px 1px;
+        background-repeat: no-repeat;
+      }
+
+      .inline-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 4px 2px 2px;
+      }
+
+      .toggle-label-text {
+        display: flex;
+        flex-direction: column;
+        font-size: 10px;
+        color: var(--text-soft);
+      }
+
+      .toggle-label-text span.main {
+        font-size: 11px;
+        color: var(--text-main);
+        font-weight: 500;
+      }
+
+      .toggle-wrapper {
+        position: relative;
+        width: 34px;
+        height: 18px;
+      }
+
+      .toggle-wrapper input {
+        opacity: 0;
+        width: 34px;
+        height: 18px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: 0;
+        cursor: pointer;
+      }
+
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        background: #111827;
+        border-radius: 999px;
+        border: 1px solid rgba(75,85,99,0.9);
+        transition: all var(--transition-fast);
+      }
+
+      .toggle-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: #9ca3af;
+        transition: all var(--transition-fast);
+      }
+
+      .toggle-wrapper input:checked + .toggle-track {
+        background: var(--accent);
+        border-color: transparent;
+      }
+
+      .toggle-wrapper input:checked + .toggle-track .toggle-thumb {
+        transform: translateX(14px);
+        background: #ffffff;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid rgba(75,85,99,0.7);
+        margin: 4px 0 4px;
+      }
+
+      .status {
+        margin-top: 4px;
+        font-size: 9px;
+        color: var(--text-soft);
+        min-height: 10px;
+      }
+
+      .hint {
+        font-size: 9px;
+        color: var(--text-soft);
+        margin-top: 4px;
+      }
+
+      .hint strong {
+        color: var(--accent-alt);
+        font-weight: 500;
+      }
+
+      .gcal-actions {
+        display: grid;
+        grid-template-columns: 1.05fr 1.2fr;
+        gap: 6px;
+        margin-bottom: 2px;
+      }
+
+      .pill-small {
+        font-size: 8px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(34,197,94,0.09);
+        color: var(--accent-alt);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .pill-small-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--accent-alt);
+      }
+
+      button.full-width {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 6px;
+        box-sizing: border-box;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="header">
+        <div class="title-block">
+          <h1>PRONOTE Planner</h1>
+          <div class="subtitle">Capture homework → build sessions → sync in 1 click.</div>
+        </div>
+        <div class="pill">
+          <div class="pill-dot"></div>
+          Active
+        </div>
+      </div>
+
+      <div class="mini-links">
+        <a id="popup-schedule-link" href="#" target="_blank" aria-label="Schedule">
+          <img id="schedule-icon" class="link-icon" src="Icon/Schedule.png" alt="Schedule" />
+        </a>
+        <a id="popup-pronote-link" href="#" target="_blank" aria-label="Pronote">
+          <img id="pronote-icon" class="link-icon" src="Icon/Pronote icon.png" alt="Pronote" />
+        </a>
+        <a id="popup-gcal-link" class="mini-link" href="https://calendar.google.com" target="_blank" aria-label="Google Calendar">
+          <img id="google-icon" class="link-icon" src="Icon/Google_Calender.png" alt="Calendar" />
+        </a>
+      </div>
+
+      <hr />
+
+      <div class="reminder-shell">
+        <div class="group-label">Reminders</div>
+        <div class="hint">Create a reminder (it will save, but won’t show here).</div>
+        <div class="reminder-form">
+          <input id="reminder-title" type="text" placeholder="Reminder title" />
+          <textarea id="reminder-note" placeholder="What do you need to do?"></textarea>
+          <input id="reminder-tag" type="text" placeholder="Tag (e.g., Math Team, Chores)" />
+          <div class="reminder-date-row">
+            <label class="reminder-toggle">
+              <input id="reminder-use-weekday" type="checkbox" />
+              <span>Use weekday (e.g., next Monday)</span>
+            </label>
+            <div class="reminder-date-slot">
+              <input id="reminder-datetime" type="text" inputmode="numeric" pattern="\\d{2}/\\d{2}" placeholder="DD/MM" />
+              <select id="reminder-weekday" class="hidden">
+                <option value="">Select weekday</option>
+                <option value="monday">Next Monday</option>
+                <option value="tuesday">Next Tuesday</option>
+                <option value="wednesday">Next Wednesday</option>
+                <option value="thursday">Next Thursday</option>
+                <option value="friday">Next Friday</option>
+                <option value="saturday">Next Saturday</option>
+                <option value="sunday">Next Sunday</option>
+              </select>
+            </div>
+          </div>
+          <button id="reminder-save" class="primary full-width">Save reminder</button>
+        </div>
+      </div>
+
+      <div class="group-label">Google Calendar sync</div>
+      <div class="gcal-actions">
+        <button id="gcal-login" class="secondary">
+          <span class="label">Sign in</span>
+        </button>
+        <button id="gcal-sync" class="primary">
+          <span class="label">Sync study sessions</span>
+        </button>
+      </div>
+      <div class="pill-small">
+        <div class="pill-small-dot"></div>
+        Uses your defined study windows
+      </div>
+      <button id="reset-and-rescan" class="ghost full-width" style="margin-top:4px;">Delete homework & re-scan</button>
+
+      <div id="popup-status" class="status"></div>
+      <div class="hint">
+        Set your <strong>allowed study windows</strong> in the scheduling page so sessions never land at random times.
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,76 @@
+PRONOTE Planner (Lite) - Function/Architecture Notes
+====================================================
+
+Updated: 2026-03-06
+
+Overview
+--------
+The extension captures PRONOTE homework, stores a bounded local dataset,
+builds study sessions, renders planner UI, and optionally syncs sessions
+to a dedicated Google Calendar owned by the extension flow.
+
+manifest.json
+-------------
+- MV3 service worker: `background.js`
+- Content scripts on `https://*.index-education.net/pronote/*`:
+  - `click_capture.js`
+  - `scanner.js`
+- Permissions include `storage`, `downloads`, `tabs`, `alarms`, `identity`, `unlimitedStorage`.
+- Google OAuth scope is least-privilege: `calendar.app.created`.
+
+click_capture.js
+----------------
+- Listens to click/submit events only.
+- Sends minimal trigger metadata (`kind`, `time`, `url`).
+- Does not patch global fetch/XHR.
+- Does not collect form values.
+
+scanner.js
+----------
+- Observes PRONOTE DOM and same-origin frames to extract homework.
+- Generates local TXT/JSON/CSV/ICS artifacts.
+- Bounded `pronoteItems` storage writes to control quota growth.
+- Uses local hash utility (no `String.prototype` mutation).
+
+background.js
+-------------
+Core responsibilities:
+1) Message broker for capture, imports, schedule retrieval, and sync.
+2) Startup migration:
+   - Sets extension state version.
+   - Prunes oversized `pronoteItems`.
+   - Removes legacy AI credential keys (`aiBackendToken`, `aiBackendUser`, `aiBackendUrl`).
+3) Schedule generation:
+   - Builds study plan.
+   - Adds recurring occurrences.
+   - Applies manual overrides and prunes stale override entries.
+4) Google Calendar sync isolation:
+   - Creates/reuses dedicated managed calendar (`gcalCalendarId`).
+   - Upserts/deletes only extension-managed events using immutable `pronoteKey`.
+   - No title/day fallback matching against user calendars.
+5) Auto-sync reliability:
+   - In-flight guard + dirty rerun queue to prevent lost updates.
+
+options.js / options.html
+-------------------------
+Tabs:
+- Homework, Recurring, Calendar, Software, Techniques, AI.
+
+Key behavior:
+- AI mode is disabled in UI and runtime calls.
+- Onboarding flow is unified (single implementation), with safe DOM assignment for user values.
+- Onboarding can persist recurring event draft into recurring storage.
+- Deleting homework and reset actions clean/prune related plan overrides.
+- Software icons use local assets (no external favicon lookup).
+- Storage get/set/remove is centralized with `chrome.runtime.lastError` handling.
+
+popup.js / popup.html
+---------------------
+- Google login + sync controls.
+- Reset/rescan now clears `pronoteItems` and `planOverrides`.
+- Status text informs users that sync targets the dedicated PRONOTE Planner calendar.
+
+Docs + Compliance Notes
+-----------------------
+- `PRIVACY.md` reflects current runtime behavior (AI disabled, minimal capture, managed calendar isolation).
+- This extension remains a client-side tool; deployment owners should still validate FERPA/GDPR obligations in their environment.

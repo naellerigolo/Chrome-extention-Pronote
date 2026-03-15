@@ -1,0 +1,595 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Study Time Settings</title>
+    <style>
+      :root {
+        --bg: #020817;
+        --card: #020817;
+        --card-soft: #020817;
+        --accent: #2563eb;
+        --accent-soft: rgba(37, 99, 235, 0.18);
+        --accent-alt: #22c55e;
+        --text: #e5e7eb;
+        --text-soft: #9ca3af;
+        --border: rgba(148, 163, 253, 0.2);
+        --radius-xl: 22px;
+        --radius-md: 12px;
+        --shadow-card: 0 20px 55px rgba(15, 23, 42, 0.9);
+        --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --transition: 0.18s ease-out;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        font-family: var(--font);
+        background:
+          radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent),
+          radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), transparent),
+          var(--bg);
+        color: var(--text);
+        overflow-y: auto;
+      }
+
+      body {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 24px 0;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 960px;
+        padding: 24px 22px;
+        border-radius: var(--radius-xl);
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent),
+          radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent),
+          rgba(4, 7, 18, 0.98);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-card);
+      }
+
+      .lang-picker {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .lang-picker label {
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .lang-picker select {
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.35);
+        background: rgba(15, 23, 42, 0.9);
+        color: var(--text);
+        padding: 6px 10px;
+        font-size: 13px;
+        min-width: 160px;
+      }
+
+      .label-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 253, 0.3);
+        font-size: 9px;
+        color: var(--text-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 8px;
+        background: rgba(2, 6, 23, 0.98);
+      }
+
+      .label-pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .subtitle {
+        margin: 0 0 14px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.7fr 0.9fr;
+        gap: 6px 10px;
+        margin-top: 6px;
+        align-items: center;
+      }
+
+      .section-label {
+        margin-top: 8px;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--accent-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .key-label {
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .minutes-input {
+        width: 70px;
+        padding: 4px 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(2, 6, 23, 0.98);
+        color: var(--text);
+        font-size: 11px;
+        outline: none;
+        transition: border-color var(--transition), box-shadow var(--transition),
+          background var(--transition), transform var(--transition);
+      }
+
+      .minutes-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28);
+        background: #020817;
+        transform: translateY(-1px);
+      }
+
+      .minutes-suffix {
+        font-size: 9px;
+        color: var(--text-soft);
+      }
+
+      .hint {
+        margin-top: 6px;
+        font-size: 10px;
+        color: var(--text-soft);
+      }
+
+      .actions {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn {
+        border: none;
+        cursor: pointer;
+        padding: 7px 14px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+        font-family: var(--font);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all var(--transition);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 10px 26px rgba(37, 99, 235, 0.45);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 36px rgba(37, 99, 235, 0.6);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-soft);
+        border: 1px solid rgba(148, 163, 253, 0.18);
+      }
+
+      .btn-ghost:hover {
+        background: rgba(9, 9, 20, 0.96);
+        color: var(--accent-soft);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.9);
+      }
+
+      .calendar-shell {
+        margin-top: 14px;
+        border: 1px solid rgba(148,163,253,0.22);
+        border-radius: 18px;
+        overflow: hidden;
+        background: rgba(5,10,25,0.92);
+        box-shadow: 0 18px 36px rgba(5,10,25,0.65);
+      }
+
+      .calendar-header {
+        display: grid;
+        grid-template-columns: 70px repeat(7, 1fr);
+        padding: 10px 12px 8px;
+        border-bottom: 1px solid rgba(148,163,253,0.18);
+        background: linear-gradient(90deg, rgba(14,23,45,0.7), rgba(10,16,35,0.7));
+        font-size: 11px;
+        color: #cbd5f5;
+        letter-spacing: 0.04em;
+      }
+
+      .calendar-grid {
+        position: relative;
+        display: grid;
+        grid-template-columns: 70px repeat(7, 1fr);
+        gap: 0;
+        background: rgba(6, 10, 25, 0.85);
+      }
+
+      .time-col {
+        position: relative;
+        border-right: 1px solid rgba(148,163,253,0.1);
+        color: #64748b;
+        font-size: 11px;
+        background: rgba(8,12,25,0.85);
+      }
+
+      .time-label {
+        position: absolute;
+        right: 8px;
+        font-size: 10px;
+      }
+
+      .hour-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(148,163,253,0.12);
+        pointer-events: none;
+      }
+
+      .day-col {
+        position: relative;
+        border-right: 1px solid rgba(148,163,253,0.08);
+        background: rgba(7,11,24,0.6);
+      }
+
+      .block {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        border-radius: 10px;
+        background: rgba(59,130,246,0.18);
+        border: 1px solid rgba(59,130,246,0.5);
+        color: #e2e8f0;
+        font-size: 11px;
+        padding: 6px 8px;
+        cursor: grab;
+        box-shadow: 0 8px 18px rgba(6,12,30,0.5);
+        user-select: none;
+      }
+
+      .block:hover {
+        background: rgba(59,130,246,0.26);
+      }
+
+      .block .time-range {
+        font-size: 10px;
+        color: #cbd5f5;
+        letter-spacing: 0.04em;
+      }
+
+      .drag-hint {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        border-radius: 10px;
+        border: 1px dashed rgba(59,130,246,0.6);
+        background: rgba(59,130,246,0.08);
+        pointer-events: none;
+      }
+
+      .block-handle {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 10px;
+        cursor: ns-resize;
+      }
+
+      .block-handle.top {
+        top: -4px;
+      }
+
+      .block-handle.bottom {
+        bottom: -4px;
+      }
+
+      .help-row {
+        margin: 10px 0 4px;
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      .view-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0 2px;
+        font-size: 12px;
+        color: #cbd5f5;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 22px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: rgba(148,163,253,0.3);
+        border-radius: 999px;
+        transition: 0.2s ease;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #fff;
+        border-radius: 50%;
+        transition: 0.2s ease;
+      }
+
+      .switch input:checked + .slider {
+        background: var(--accent);
+      }
+
+      .switch input:checked + .slider:before {
+        transform: translateX(22px);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Classic list fallback */
+      .day {
+        background: linear-gradient(140deg, rgba(10,18,40,0.95), rgba(6,10,26,0.9));
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 253, 0.25);
+        padding: 14px;
+        box-shadow: 0 10px 24px rgba(5, 10, 25, 0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .day > strong {
+        font-size: 14px;
+        font-weight: 700;
+        color: #e8edff;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .row input[type="time"] {
+        padding: 6px 8px;
+        min-width: 120px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        background: rgba(9, 13, 30, 0.9);
+        color: #e2e8f0;
+        font-size: 12px;
+      }
+
+      .row button {
+        padding: 6px 10px;
+        font-size: 11px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 253, 0.3);
+        background: rgba(15, 23, 42, 0.98);
+        color: var(--text-soft);
+        cursor: pointer;
+      }
+
+      .back-btn {
+        margin-bottom: 12px;
+        background: transparent;
+        color: var(--text-soft);
+        border: 1px solid rgba(148, 163, 253, 0.4);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+      }
+
+      #status {
+        font-size: 10px;
+        color: var(--text-soft);
+        min-height: 12px;
+      }
+
+      #status.ok {
+        color: var(--accent-alt);
+      }
+
+      #status.err {
+        color: #f97373;
+      }
+
+      @media (max-width: 560px) {
+        .wrap {
+          margin: 14px;
+          padding: 20px 16px 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="label-pill">
+        <div class="label-pill-dot"></div>
+        <span data-i18n="sdSettingsPill">Settings</span>
+      </div>
+      <h1 data-i18n="sdSettingsTitle">Settings</h1>
+      <p class="subtitle" data-i18n="sdSettingsSubtitle">
+        Adjust study durations and allowed windows. Language is set above.
+      </p>
+      <div class="lang-picker">
+        <label for="sd-language" data-i18n="sdLangLabel">Language</label>
+        <select id="sd-language">
+          <option value="en" data-i18n="sdLangEn">English</option>
+          <option value="fr" data-i18n="sdLangFr">Français</option>
+        </select>
+      </div>
+      <div class="lang-picker" style="margin-top:-4px;">
+        <label for="sd-time-format" data-i18n="sdTimeLabel">Time format</label>
+        <select id="sd-time-format">
+          <option value="12h" data-i18n="sdTime12">12-hour (AM/PM)</option>
+          <option value="24h" data-i18n="sdTime24">24-hour</option>
+        </select>
+      </div>
+
+      <button id="back-to-options" class="btn back-btn" type="button" data-i18n="sdBack">← Back to planner</button>
+
+      <div class="section-label" data-i18n="sdHomework">Homework</div>
+      <div class="grid">
+        <div class="key-label" data-i18n="sdHwEasy">Easy homework</div>
+        <div class="input-wrap">
+          <input id="dur-hw-easy" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+
+        <div class="key-label" data-i18n="sdHwMed">Medium homework</div>
+        <div class="input-wrap">
+          <input id="dur-hw-med" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+
+        <div class="key-label" data-i18n="sdHwHard">Hard homework</div>
+        <div class="input-wrap">
+          <input id="dur-hw-hard" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+      </div>
+
+      <div class="section-label" data-i18n="sdTests">Tests / Exams</div>
+      <div class="grid">
+        <div class="key-label" data-i18n="sdTestEasy">Easy test</div>
+        <div class="input-wrap">
+          <input id="dur-test-easy" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+
+        <div class="key-label" data-i18n="sdTestMed">Medium test</div>
+        <div class="input-wrap">
+          <input id="dur-test-med" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+
+        <div class="key-label" data-i18n="sdTestHard">Hard test</div>
+        <div class="input-wrap">
+          <input id="dur-test-hard" class="minutes-input" type="number" min="5" max="300" />
+          <span class="minutes-suffix" data-i18n="sdMin">min</span>
+        </div>
+      </div>
+
+      <p class="hint" data-i18n="sdHintExample">
+        Example: If “Homework · Medium” is 45, a medium homework item will be planned as ~45 minutes.
+      </p>
+
+      <div class="actions">
+        <button id="save" class="btn btn-primary" data-i18n="sdSave">Save</button>
+        <button id="reset" class="btn btn-ghost" data-i18n="sdReset">Reset to defaults</button>
+        <span id="status"></span>
+      </div>
+
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="sdSchedPill">Scheduling Rules</span>
+        </div>
+        <h1 data-i18n="sdSchedTitle">Allowed Time Windows</h1>
+        <div class="view-toggle">
+          <span data-i18n="sdClassic">Classic list</span>
+          <label class="switch">
+            <input id="view-toggle" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+          <span data-i18n="sdCalendar">Calendar view</span>
+        </div>
+        <p class="hint" data-i18n="sdSchedHint">
+          Drag on the grid to create allowed blocks. Drag edges to resize; click a block to delete. Sessions are packed inside these windows.
+        </p>
+        <div id="calendar-shell" class="calendar-shell">
+          <div class="calendar-header">
+            <div></div>
+            <div data-i18n="monShort">Mon</div>
+            <div data-i18n="tueShort">Tue</div>
+            <div data-i18n="wedShort">Wed</div>
+            <div data-i18n="thuShort">Thu</div>
+            <div data-i18n="friShort">Fri</div>
+            <div data-i18n="satShort">Sat</div>
+            <div data-i18n="sunShort">Sun</div>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+        <div class="help-row" data-i18n="sdHelp">Tip: drag to create; drag edges to resize; click to delete.</div>
+        <div id="classic-shell" class="hidden">
+          <div id="days"></div>
+        </div>
+        <div class="actions">
+          <button id="save-windows" class="btn btn-primary" data-i18n="sdSaveWindows">Save windows</button>
+          <button id="reset-windows" class="btn btn-ghost" data-i18n="sdResetWindows">Reset to defaults</button>
+          <span id="windows-status" class="status-inline"></span>
+        </div>
+      </div>
+    </div>
+
+    <script src="study_durations.js"></script>
+  </body>
+</html>
