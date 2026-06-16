@@ -81,6 +81,17 @@ const $planModalSave = document.getElementById('plan-modal-save');
 const $planModalReset = document.getElementById('plan-modal-reset');
 const $planModalClose = document.getElementById('plan-modal-close');
 const $planModalTitle = document.getElementById('plan-modal-title');
+const $studySessionModal = document.getElementById('study-session-modal');
+const $studySessionClose = document.getElementById('study-session-close');
+const $studySessionTitle = document.getElementById('study-session-title');
+const $studySessionMeta = document.getElementById('study-session-meta');
+const $studySessionTimer = document.getElementById('study-session-timer');
+const $studySessionProgress = document.getElementById('study-session-progress');
+const $studySessionStart = document.getElementById('study-session-start');
+const $studySessionPause = document.getElementById('study-session-pause');
+const $studySessionDone = document.getElementById('study-session-done');
+const $studySessionReset = document.getElementById('study-session-reset');
+const $studySessionOpenHomework = document.getElementById('study-session-open-homework');
 const $toastHost = document.getElementById('toast-host');
 const $notifyEnabled = document.getElementById('notify-enabled');
 const $notifyTime = document.getElementById('notify-time');
@@ -106,6 +117,7 @@ const CAL_DAY_END = 24 * 60;
 
 const RECURRING_KEY = 'recurringEvents';
 const PLAN_OVERRIDES_KEY = 'planOverrides';
+const STUDY_SESSIONS_KEY = 'studySessions';
 const defaultReminderTag = 'Reminder';
 const ONBOARDING_KEY = 'onboarding_seen';
 const MAX_PRONOTE_ITEMS = 1200;
@@ -137,6 +149,7 @@ const BACKUP_LOCAL_KEYS = [
   'reminders',
   RECURRING_KEY,
   PLAN_OVERRIDES_KEY,
+  STUDY_SESSIONS_KEY,
   'captureDiagnostics',
   'gcalCalendarId',
   'extensionStateVersion',
@@ -234,6 +247,10 @@ function prunePronoteItems(list) {
 let modalCurrentIndex = null;
 let modalCurrentItem = null;
 let calWeekStart = startOfWeek(new Date());
+let cachedStudySessions = {};
+let currentStudySessionId = null;
+let currentStudySessionEvent = null;
+let studySessionTick = null;
 const TRANSLATIONS = {
   en: {
     days: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
@@ -284,6 +301,23 @@ const TRANSLATIONS = {
     calWarningSummary: '{count} scheduling warning(s) in this week.',
     calConflictOverlap: 'Overlaps a recurring event',
     calConflictOutside: 'Outside study window',
+    priorityLabel: 'Priority',
+    sessionModalTitle: 'Study session',
+    sessionButtonStart: 'Start',
+    sessionButtonDone: 'Done',
+    sessionStart: 'Start',
+    sessionPause: 'Pause',
+    sessionComplete: 'Complete',
+    sessionReset: 'Reset',
+    sessionOpenHomework: 'Open homework',
+    sessionStarted: 'Study session started.',
+    sessionPaused: 'Study session paused.',
+    sessionCompleted: 'Study session completed.',
+    sessionResetDone: 'Study session reset.',
+    sessionStatusRunning: 'running',
+    sessionStatusPaused: 'paused',
+    sessionStatusCompleted: 'completed',
+    sessionStatusReady: 'ready',
     softwarePill: 'Software',
     softwareTitle: 'Best free student software',
     softwareHint: 'Web-only tools that are free and useful for high school.',
@@ -545,6 +579,23 @@ const TRANSLATIONS = {
     calWarningSummary: '{count} avertissement(s) de planning cette semaine.',
     calConflictOverlap: 'Chevauche un évènement récurrent',
     calConflictOutside: 'Hors créneau d’étude',
+    priorityLabel: 'Priorité',
+    sessionModalTitle: 'Séance de révision',
+    sessionButtonStart: 'Démarrer',
+    sessionButtonDone: 'Terminé',
+    sessionStart: 'Démarrer',
+    sessionPause: 'Pause',
+    sessionComplete: 'Terminer',
+    sessionReset: 'Réinitialiser',
+    sessionOpenHomework: 'Ouvrir le devoir',
+    sessionStarted: 'Séance démarrée.',
+    sessionPaused: 'Séance en pause.',
+    sessionCompleted: 'Séance terminée.',
+    sessionResetDone: 'Séance réinitialisée.',
+    sessionStatusRunning: 'en cours',
+    sessionStatusPaused: 'en pause',
+    sessionStatusCompleted: 'terminée',
+    sessionStatusReady: 'prête',
     softwarePill: 'Logiciels',
     softwareTitle: 'Meilleurs logiciels gratuits',
     softwareHint: 'Outils web gratuits utiles au lycée.',
@@ -2062,6 +2113,68 @@ function getEstimatedMinutes(item) {
   return Number.isFinite(val) && val > 0 ? val : fallback;
 }
 
+function parseISODateLocal(iso) {
+  const [y, m, d] = String(iso || '').split('-').map(v => parseInt(v, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return new Date(y, m - 1, d);
+}
+
+function resolveItemKind(item) {
+  const type = String(item?.type || '').toLowerCase();
+  return type === 'test' || type === 'both' ? 'test' : 'homework';
+}
+
+function resolveItemDifficulty(item) {
+  const text = String(item?.difficulty || '').toLowerCase();
+  if (text === 'easy' || text === 'hard') return text;
+  if (text.includes('epreuve') || text.includes('épreuve')) return 'hard';
+  return 'medium';
+}
+
+function daysUntilDue(iso) {
+  const due = parseISODateLocal(iso);
+  if (!(due instanceof Date) || Number.isNaN(due.getTime())) return 999;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due - today) / 86400000);
+}
+
+function calculateItemPriorityScore(item, sessionDate = '') {
+  if (!item || item.isReminder) return 0;
+  const kind = resolveItemKind(item);
+  const diff = resolveItemDifficulty(item);
+  const days = daysUntilDue(item.dueDate || sessionDate);
+  let score = 10;
+  if (kind === 'test') score += 40;
+  if (diff === 'hard') score += 25;
+  else if (diff === 'medium') score += 12;
+  if (days <= 1) score += 35;
+  else if (days <= 3) score += 26;
+  else if (days <= 7) score += 16;
+  else if (days <= 14) score += 8;
+  const notesLen = String(item.notes || '').length;
+  if (notesLen > 140) score += 8;
+  else if (notesLen > 80) score += 4;
+  const manual = parseInt(item.manualMinutes, 10);
+  if (Number.isFinite(manual) && manual >= 75) score += 6;
+  if (sessionDate && item.dueDate) {
+    const due = parseISODateLocal(item.dueDate);
+    const session = parseISODateLocal(sessionDate);
+    if (due && session) {
+      const spacing = Math.max(0, Math.round((due - session) / 86400000));
+      if (spacing <= 1) score += 4;
+    }
+  }
+  return Math.max(0, Math.min(99, score));
+}
+
+function priorityScoreOf(row) {
+  const explicit = parseInt(row?.priorityScore, 10);
+  if (Number.isFinite(explicit)) return explicit;
+  return row && !row.isReminder ? calculateItemPriorityScore(row, row.dueDate || row.date || '') : 0;
+}
+
 function formatISODate(d) {
   if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
   const y = d.getFullYear();
@@ -2415,7 +2528,11 @@ function renderOverviewList(items) {
         diffSelect.value = it.difficulty || 'medium';
         diffSelect.addEventListener('change', () => updatePronoteItem(it._index, { difficulty: diffSelect.value }));
         diffWrap.append(diffLabel, diffSelect);
-        meta.append(typeBadge, diffWrap);
+        const score = priorityScoreOf(it);
+        const priorityBadge = document.createElement('span');
+        priorityBadge.className = 'priority-badge';
+        priorityBadge.textContent = `${t('priorityLabel')} ${score}`;
+        meta.append(typeBadge, diffWrap, priorityBadge);
       }
       const notes = document.createElement('div'); notes.className = 'notes'; if (it.notes) notes.textContent = it.notes.slice(0, 240);
       card.append(top, meta, notes);
@@ -2610,8 +2727,12 @@ function renderCalendarEvents(events, weekStart = calWeekStart) {
     const windows = cfg.studyWindows || defaultStudyWindows;
     const annotated = annotateCalendarWarnings(events, windows);
     const resolved = resolveHomeworkOverlaps(annotated);
-    updateCalendarWarningSummary(resolved);
-    renderCalendarGrid(resolved, targetWeekStart);
+    localGet({ [STUDY_SESSIONS_KEY]: {} }, (res) => {
+      if (isoDateFromDate(targetWeekStart) !== isoDateFromDate(calWeekStart)) return;
+      cachedStudySessions = normalizeStudySessions(res[STUDY_SESSIONS_KEY]);
+      updateCalendarWarningSummary(resolved);
+      renderCalendarGrid(resolved, targetWeekStart);
+    });
   });
 }
 
@@ -2715,6 +2836,188 @@ function autoFitCurrentWeek() {
       showToast(t('calAutoFitDone'), 'success');
     });
   });
+}
+
+function normalizeStudySessions(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function studySessionState(id) {
+  if (!id) return null;
+  return normalizeStudySessions(cachedStudySessions)[id] || null;
+}
+
+function studySessionElapsedSeconds(state) {
+  if (!state) return 0;
+  const base = Math.max(0, parseInt(state.elapsedSeconds, 10) || 0);
+  if (state.status !== 'running' || !state.startedAt) return base;
+  const started = new Date(state.startedAt);
+  if (!(started instanceof Date) || Number.isNaN(started.getTime())) return base;
+  return base + Math.max(0, Math.floor((Date.now() - started.getTime()) / 1000));
+}
+
+function plannedSessionSeconds(event) {
+  return Math.max(60, (parseInt(event?.minutes, 10) || 30) * 60);
+}
+
+function formatSessionClock(seconds) {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function persistStudySession(id, patch, cb) {
+  if (!id) return;
+  localGet({ [STUDY_SESSIONS_KEY]: {} }, (res) => {
+    const all = normalizeStudySessions(res[STUDY_SESSIONS_KEY]);
+    if (patch === null) {
+      delete all[id];
+      cachedStudySessions = all;
+      localSet({ [STUDY_SESSIONS_KEY]: all }, () => {
+        if (typeof cb === 'function') cb(null);
+        renderCalendar();
+      });
+      return;
+    }
+    const previous = all[id] || {};
+    const next = {
+      ...previous,
+      ...patch,
+      updatedAt: new Date().toISOString()
+    };
+    all[id] = next;
+    cachedStudySessions = all;
+    localSet({ [STUDY_SESSIONS_KEY]: all }, () => {
+      if (typeof cb === 'function') cb(next);
+      renderCalendar();
+    });
+  });
+}
+
+function sessionStatusLabel(state) {
+  if (!state || !state.status) return t('sessionStatusReady');
+  if (state.status === 'completed') return t('sessionStatusCompleted');
+  if (state.status === 'running') return t('sessionStatusRunning');
+  if (state.status === 'paused') return t('sessionStatusPaused');
+  return t('sessionStatusReady');
+}
+
+function updateStudySessionModal() {
+  if (!$studySessionModal || !currentStudySessionId || !currentStudySessionEvent) return;
+  const state = studySessionState(currentStudySessionId);
+  const elapsed = studySessionElapsedSeconds(state);
+  const planned = plannedSessionSeconds(currentStudySessionEvent);
+  const pct = Math.max(0, Math.min(100, (elapsed / planned) * 100));
+  if ($studySessionTitle) $studySessionTitle.textContent = currentStudySessionEvent.title || t('studySession');
+  if ($studySessionTimer) $studySessionTimer.textContent = `${formatSessionClock(elapsed)} / ${formatSessionClock(planned)}`;
+  if ($studySessionProgress) $studySessionProgress.style.width = `${pct}%`;
+  if ($studySessionMeta) {
+    const parts = [
+      currentStudySessionEvent.date || '',
+      formatDuration(currentStudySessionEvent.minutes || 0),
+      `${t('priorityLabel')} ${currentStudySessionEvent.priorityScore || 0}`,
+      sessionStatusLabel(state)
+    ].filter(Boolean);
+    $studySessionMeta.textContent = parts.join(' • ');
+  }
+  const status = state?.status || 'ready';
+  if ($studySessionStart) $studySessionStart.disabled = status === 'running' || status === 'completed';
+  if ($studySessionPause) $studySessionPause.disabled = status !== 'running';
+  if ($studySessionDone) $studySessionDone.disabled = status === 'completed';
+}
+
+function startStudySessionTicker() {
+  clearInterval(studySessionTick);
+  updateStudySessionModal();
+  studySessionTick = setInterval(updateStudySessionModal, 1000);
+}
+
+function closeStudySessionModal() {
+  clearInterval(studySessionTick);
+  studySessionTick = null;
+  currentStudySessionId = null;
+  currentStudySessionEvent = null;
+  $studySessionModal?.classList.add('hidden');
+}
+
+function openStudySession(event) {
+  if (!event || !event.id) return;
+  currentStudySessionId = event.id;
+  currentStudySessionEvent = {
+    id: event.id,
+    title: event.title || t('studySession'),
+    date: event.date || '',
+    minutes: Math.max(1, parseInt(event.minutes, 10) || 30),
+    priorityScore: parseInt(event.priorityScore, 10) || 0,
+    itemIndex: event.itemIndex,
+    dueDate: event.dueDate || '',
+    subject: event.subject || ''
+  };
+  $studySessionModal?.classList.remove('hidden');
+  startStudySessionTicker();
+}
+
+function startCurrentStudySession() {
+  if (!currentStudySessionId || !currentStudySessionEvent) return;
+  const state = studySessionState(currentStudySessionId);
+  const elapsed = studySessionElapsedSeconds(state);
+  persistStudySession(currentStudySessionId, {
+    title: currentStudySessionEvent.title,
+    minutes: currentStudySessionEvent.minutes,
+    priorityScore: currentStudySessionEvent.priorityScore,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+    elapsedSeconds: elapsed
+  }, () => {
+    showToast(t('sessionStarted'), 'success');
+    startStudySessionTicker();
+  });
+}
+
+function pauseCurrentStudySession() {
+  if (!currentStudySessionId) return;
+  const state = studySessionState(currentStudySessionId);
+  persistStudySession(currentStudySessionId, {
+    status: 'paused',
+    startedAt: null,
+    elapsedSeconds: studySessionElapsedSeconds(state)
+  }, () => {
+    showToast(t('sessionPaused'), 'success');
+    updateStudySessionModal();
+  });
+}
+
+function completeCurrentStudySession() {
+  if (!currentStudySessionId || !currentStudySessionEvent) return;
+  const state = studySessionState(currentStudySessionId);
+  const planned = plannedSessionSeconds(currentStudySessionEvent);
+  persistStudySession(currentStudySessionId, {
+    status: 'completed',
+    startedAt: null,
+    completedAt: new Date().toISOString(),
+    elapsedSeconds: Math.max(studySessionElapsedSeconds(state), planned)
+  }, () => {
+    showToast(t('sessionCompleted'), 'success');
+    updateStudySessionModal();
+  });
+}
+
+function resetCurrentStudySession() {
+  if (!currentStudySessionId) return;
+  persistStudySession(currentStudySessionId, null, () => {
+    showToast(t('sessionResetDone'), 'success');
+    updateStudySessionModal();
+  });
+}
+
+function openCurrentSessionHomework() {
+  if (!currentStudySessionEvent) return;
+  const ev = { ...currentStudySessionEvent, planId: currentStudySessionEvent.id };
+  closeStudySessionModal();
+  openHomeworkFromCalendar(ev);
 }
 
 function parsePlanId(planId) {
@@ -2834,6 +3137,7 @@ function buildWeekEvents(weekStart, items, recurring) {
     if (!it || !it.dueDate) return;
     if (!inRange(it.dueDate)) return;
     const mins = defaultMinutes(it);
+    const priorityScore = priorityScoreOf(it);
     const [y, m, d] = it.dueDate.split('-').map(v => parseInt(v, 10) || 0);
     const st = new Date(y, m - 1, d, 0, 0, 0);
     const en = new Date(st.getTime() + mins * 60000);
@@ -2846,7 +3150,8 @@ function buildWeekEvents(weekStart, items, recurring) {
       kind: 'hw',
       dueDate: it.dueDate,
       subject: it.subject || '',
-      itemIndex: idx
+      itemIndex: idx,
+      priorityScore
     });
   });
 
@@ -2884,7 +3189,7 @@ function buildWeekEvents(weekStart, items, recurring) {
         if (cursor + mins > CAL_DAY_END) break;
       }
     };
-    homework.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    homework.sort((a, b) => priorityScoreOf(b) - priorityScoreOf(a) || (a.title || '').localeCompare(b.title || ''));
     homework.forEach(placeHw);
     // merge rec + placed
     out.push(...dayEvents.filter(ev => ev.kind === 'rec'), ...placed);
@@ -3001,6 +3306,13 @@ function renderCalendarGrid(events, weekStart) {
       slot.dataset.minutes = String(minutes);
       slot.dataset.title = ev.title || '';
       slot.dataset.kind = slotKind;
+      const sessionState = slotKind === 'hw' && eventId ? studySessionState(eventId) : null;
+      if (sessionState?.status === 'completed') slot.classList.add('done');
+      const priorityScore = priorityScoreOf(ev);
+      if (slotKind === 'hw') {
+        slot.dataset.priorityScore = String(priorityScore);
+        if (priorityScore >= 70) slot.classList.add('high-priority');
+      }
       if (ev.itemIndex != null) slot.dataset.itemIndex = String(ev.itemIndex);
       if (eventId) slot.dataset.planId = eventId;
       if (ev.dueDate) slot.dataset.dueDate = ev.dueDate;
@@ -3013,11 +3325,44 @@ function renderCalendarGrid(events, weekStart) {
       meta.className = 'cal-slot-meta';
       meta.textContent = ev.meta || '';
       slot.append(title, meta);
+      if (slotKind === 'hw' && priorityScore > 0) {
+        const priorityBadge = document.createElement('div');
+        priorityBadge.className = 'priority-badge';
+        priorityBadge.textContent = `${t('priorityLabel')} ${priorityScore}`;
+        slot.appendChild(priorityBadge);
+      }
       if (warnings.length) {
         const warning = document.createElement('div');
         warning.className = 'cal-slot-warning';
         warning.textContent = warnings[0];
         slot.appendChild(warning);
+      }
+      if (slotKind === 'hw' && eventId) {
+        const actions = document.createElement('div');
+        actions.className = 'cal-slot-actions';
+        const sessionBtn = document.createElement('button');
+        sessionBtn.type = 'button';
+        sessionBtn.className = 'session-action';
+        if (sessionState?.status === 'completed') sessionBtn.classList.add('done');
+        sessionBtn.textContent = sessionState?.status === 'completed' ? t('sessionButtonDone') : t('sessionButtonStart');
+        const sessionEvent = {
+          id: eventId,
+          title: ev.title || '',
+          date: isoDateFromDate(ev.start),
+          minutes,
+          priorityScore,
+          itemIndex: ev.itemIndex,
+          dueDate: ev.dueDate || '',
+          subject: ev.subject || ''
+        };
+        sessionBtn.addEventListener('pointerdown', (buttonEv) => buttonEv.stopPropagation());
+        sessionBtn.addEventListener('click', (buttonEv) => {
+          buttonEv.preventDefault();
+          buttonEv.stopPropagation();
+          openStudySession(sessionEvent);
+        });
+        actions.appendChild(sessionBtn);
+        slot.appendChild(actions);
       }
       if (slotKind === 'hw' && eventId) {
         slot.classList.add('draggable');
@@ -3191,6 +3536,7 @@ function renderCalendar() {
           kind: ev.pronoteKey && ev.pronoteKey.startsWith('rec-') ? 'rec' : 'hw',
           id: ev.id || '',
           minutes,
+          priorityScore: ev.priorityScore,
           dueDate: info?.dueDate || '',
           subject: info?.subject || ''
         };
@@ -3317,6 +3663,13 @@ $notifySave?.addEventListener('click', saveNotificationSettings);
 $backupExport?.addEventListener('click', exportBackupData);
 $backupImport?.addEventListener('click', () => $backupImportFile?.click());
 $backupImportFile?.addEventListener('change', () => importBackupFile($backupImportFile.files && $backupImportFile.files[0]));
+$studySessionClose?.addEventListener('click', closeStudySessionModal);
+$studySessionModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeStudySessionModal);
+$studySessionStart?.addEventListener('click', startCurrentStudySession);
+$studySessionPause?.addEventListener('click', pauseCurrentStudySession);
+$studySessionDone?.addEventListener('click', completeCurrentStudySession);
+$studySessionReset?.addEventListener('click', resetCurrentStudySession);
+$studySessionOpenHomework?.addEventListener('click', openCurrentSessionHomework);
 $calClear?.addEventListener('click', () => {
   if (!confirm(t('calClearConfirm'))) return;
   localSet({ [RECURRING_KEY]: [], [PLAN_OVERRIDES_KEY]: {} }, () => {
@@ -3398,7 +3751,7 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
       if (!changes) return;
       if (area === 'local') {
         const needsAllReload = !!(changes.pronoteItems || changes.reminders);
-        const needsCalendarReload = !!(changes[RECURRING_KEY] || changes[PLAN_OVERRIDES_KEY]);
+        const needsCalendarReload = !!(changes[RECURRING_KEY] || changes[PLAN_OVERRIDES_KEY] || changes[STUDY_SESSIONS_KEY]);
         const needsDeletedReload = !!changes.pronoteDeletedItems;
         const needsDiagnosticsReload = !!changes.captureDiagnostics;
         if (needsAllReload) {

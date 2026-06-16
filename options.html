@@ -1210,6 +1210,10 @@
       }
       .cal-slot.hw { background: linear-gradient(135deg, rgba(37, 99, 235, 0.72), rgba(59, 130, 246, 0.6)); }
       .cal-slot.rec { background: linear-gradient(135deg, rgba(34, 197, 94, 0.7), rgba(16, 185, 129, 0.7)); }
+      .cal-slot.high-priority { outline: 2px solid rgba(251, 191, 36, 0.95); }
+      .cal-slot.done {
+        background: linear-gradient(135deg, rgba(22, 163, 74, 0.8), rgba(20, 184, 166, 0.65));
+      }
       .cal-slot.warn {
         outline: 2px solid rgba(248, 113, 113, 0.95);
         box-shadow: 0 8px 20px rgba(127, 29, 29, 0.42);
@@ -1222,6 +1226,36 @@
       }
       .cal-slot-title { font-weight: 700; font-size: 12px; }
       .cal-slot-meta { font-size: 10px; opacity: 0.9; }
+      .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 2px 7px;
+        background: rgba(251, 191, 36, 0.18);
+        border: 1px solid rgba(251, 191, 36, 0.42);
+        color: #fde68a;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .cal-slot-actions {
+        display: flex;
+        gap: 5px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+      }
+      .session-action {
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.72);
+        color: #fff;
+        font-size: 10px;
+        padding: 2px 7px;
+        cursor: pointer;
+      }
+      .session-action.done {
+        border-color: rgba(187, 247, 208, 0.6);
+        color: #dcfce7;
+      }
       .cal-legend {
         display: inline-flex;
         align-items: center;
@@ -1262,6 +1296,35 @@
       .modal-footer {
         font-size: 11px;
         color: var(--text-soft);
+      }
+
+      .session-timer {
+        font-size: 30px;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: 0;
+      }
+
+      .session-progress-track {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(148, 163, 253, 0.18);
+        overflow: hidden;
+      }
+
+      .session-progress-bar {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22c55e, #fbbf24);
+        transition: width 0.2s ease;
+      }
+
+      .session-meta {
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.5;
       }
 
       .modal-controls {
@@ -1589,6 +1652,26 @@
           <button id="plan-modal-save" class="primary" type="button" data-i18n="planSave">Save</button>
           <button id="plan-modal-reset" class="secondary" type="button" data-i18n="planReset">Reset to auto</button>
         </div>
+      </div>
+    </div>
+
+    <div id="study-session-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <button id="study-session-close" class="modal-close">&times;</button>
+        <h2 class="modal-title" id="study-session-title" data-i18n="sessionModalTitle">Study session</h2>
+        <div id="study-session-meta" class="session-meta"></div>
+        <div id="study-session-timer" class="session-timer">00:00 / 00:00</div>
+        <div class="session-progress-track">
+          <div id="study-session-progress" class="session-progress-bar"></div>
+        </div>
+        <div class="button-row" style="margin-top:8px;">
+          <button id="study-session-start" class="primary" type="button" data-i18n="sessionStart">Start</button>
+          <button id="study-session-pause" class="secondary" type="button" data-i18n="sessionPause">Pause</button>
+          <button id="study-session-done" class="primary" type="button" data-i18n="sessionComplete">Complete</button>
+          <button id="study-session-reset" class="secondary" type="button" data-i18n="sessionReset">Reset</button>
+        </div>
+        <button id="study-session-open-homework" class="btn btn-ghost" type="button" data-i18n="sessionOpenHomework">Open homework</button>
       </div>
     </div>
 

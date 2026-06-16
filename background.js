@@ -674,6 +674,64 @@ function pad(n) { return String(n).padStart(2, '0'); }
 function dateFromISO(iso) { const [y, m, d] = iso.split('-').map(v => parseInt(v, 10)); return new Date(y, m - 1, d); }
 function isoFromDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
+function resolveDifficulty(value) {
+  const text = String(value || '').toLowerCase();
+  if (text === 'easy' || text === 'hard') return text;
+  if (text.includes('epreuve') || text.includes('épreuve')) return 'hard';
+  return 'medium';
+}
+
+function resolveItemKind(item) {
+  const type = String(item?.type || '').toLowerCase();
+  return type === 'test' || type === 'both' ? 'test' : 'homework';
+}
+
+function daysUntilISO(iso) {
+  const due = dateFromISO(iso);
+  if (!(due instanceof Date) || Number.isNaN(due.getTime())) return 999;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due - today) / 86400000);
+}
+
+function calculatePriorityScore(item, sessionDate = '') {
+  if (!item) return 0;
+  const kind = resolveItemKind(item);
+  const diff = resolveDifficulty(item.difficulty);
+  const days = daysUntilISO(item.dueDate || sessionDate);
+  let score = 10;
+  if (kind === 'test') score += 40;
+  if (diff === 'hard') score += 25;
+  else if (diff === 'medium') score += 12;
+  if (days <= 1) score += 35;
+  else if (days <= 3) score += 26;
+  else if (days <= 7) score += 16;
+  else if (days <= 14) score += 8;
+  const notesLen = String(item.notes || '').length;
+  if (notesLen > 140) score += 8;
+  else if (notesLen > 80) score += 4;
+  const manual = parseInt(item.manualMinutes, 10);
+  if (Number.isFinite(manual) && manual >= 75) score += 6;
+  if (sessionDate && item.dueDate) {
+    const spacing = Math.max(0, Math.round((dateFromISO(item.dueDate) - dateFromISO(sessionDate)) / 86400000));
+    if (spacing <= 1) score += 4;
+  }
+  return Math.max(0, Math.min(99, score));
+}
+
+function planPriorityScore(row) {
+  const explicit = parseInt(row?.priorityScore, 10);
+  if (Number.isFinite(explicit)) return explicit;
+  return /^(r[ée]vision|review)\b/i.test(row?.title || '') ? 20 : 0;
+}
+
+function comparePlanRows(a, b) {
+  return planPriorityScore(b) - planPriorityScore(a) ||
+    (a.title || '').localeCompare(b.title || '') ||
+    (a.id || '').localeCompare(b.id || '');
+}
+
 async function buildScheduledPlanFromStorage() {
   const storedObj = await localGet({ pronoteItems: [], recurringEvents: [], planOverrides: {} });
   const cfg = await syncGet({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' });
@@ -723,12 +781,8 @@ function makeStudyPlan(items, studyDurations, language = 'en') {
     return out.sort();
   };
 
-  const resolveDifficulty = (value) => {
-    const text = String(value || '').toLowerCase();
-    return text === 'easy' || text === 'hard' ? text : 'medium';
-  };
   const getMinutes = (it) => {
-    const type = (it.type === 'test' || it.type === 'both') ? 'test' : 'homework';
+    const type = resolveItemKind(it);
     const diff = resolveDifficulty(it.difficulty);
     const source = studyDurations && studyDurations[type] ? studyDurations[type] : defaultStudyDurations[type];
     const fallback = defaultStudyDurations[type][diff] || defaultStudyDurations[type].medium;
@@ -747,7 +801,7 @@ function makeStudyPlan(items, studyDurations, language = 'en') {
     const due = dateFromISO(it.dueDate);
     const dueISO = isoFromDate(due);
     const notesLen = (it.notes || '').length;
-    const kind = (it.type === 'both') ? 'test' : it.type;
+    const kind = resolveItemKind(it);
     const manual = parseInt(it.manualMinutes, 10);
     const minutes = Number.isFinite(manual) && manual > 0 ? manual : getMinutes(it);
     const sessionCount = clampSessionCount(it);
@@ -756,10 +810,15 @@ function makeStudyPlan(items, studyDurations, language = 'en') {
       const offsets = Array.from({ length: count }, (_, i) => count - i);
       const dates = buildDatesFromOffsets(due, dueISO, offsets);
       for (let idx = 0; idx < dates.length; idx++) {
+        const priorityScore = calculatePriorityScore(it, dates[idx]);
         sessions.push({
           id: `${it.dueDate || ''}|${it.subject || ''}|test|${idx}|${itemIdx}`,
           date: dates[idx],
           minutes,
+          priorityScore,
+          dueDate: it.dueDate || '',
+          itemType: 'test',
+          difficulty: resolveDifficulty(it.difficulty),
           title: `${isFr ? 'Révision' : 'Review'} ${it.subject || ''} (${idx + 1}/${dates.length})`.trim(),
           notes: `${isFr ? 'Préparer' : 'Prepare'} ${it.subject || ''} ${isFr ? 'pour le' : 'for'} ${dueISO}. ${(it.notes || '').slice(0, 160)}`
         });
@@ -770,17 +829,22 @@ function makeStudyPlan(items, studyDurations, language = 'en') {
         : notesLen > 140 ? [3, 2, 1] : notesLen > 80 ? [2, 1] : [1];
       const dates = buildDatesFromOffsets(due, dueISO, offsets);
       for (let idx = 0; idx < dates.length; idx++) {
+        const priorityScore = calculatePriorityScore(it, dates[idx]);
         sessions.push({
           id: `${it.dueDate || ''}|${it.subject || ''}|hw|${idx}|${itemIdx}`,
           date: dates[idx],
           minutes,
+          priorityScore,
+          dueDate: it.dueDate || '',
+          itemType: 'homework',
+          difficulty: resolveDifficulty(it.difficulty),
           title: `${isFr ? 'Devoir' : 'Homework'} ${it.subject || ''} (${idx + 1}/${dates.length})`.trim(),
           notes: `${isFr ? 'Terminer' : 'Finish'} ${it.subject || ''} ${isFr ? 'pour le' : 'for'} ${dueISO}. ${(it.notes || '').slice(0, 160)}`
         });
       }
     }
   }
-  sessions.sort((a, b) => a.date.localeCompare(b.date) || (a.title || '').localeCompare(b.title || ''));
+  sessions.sort((a, b) => a.date.localeCompare(b.date) || comparePlanRows(a, b));
   return sessions;
 }
 
@@ -831,12 +895,12 @@ function toICS(rows, studyWindows) {
   const escText = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PRONOTE Auto Study Plan//EN'];
   const gapMinutes = 5; const fmtLocal = dt => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-  const priority = title => (/^(r[ée]vision|review)\b/i.test(title || '')) ? 0 : 1; const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
+  const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
   const minutesToDate = (y, m, d, total) => new Date(y, m - 1, d, Math.floor(total / 60), total % 60, 0);
   const byDate = new Map(); for (const r of (rows || [])) { if (!r || !r.date) continue; if (!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
   let uidCounter = 0; const sortedDates = Array.from(byDate.keys()).sort();
   for (const date of sortedDates) {
-    const sessions = byDate.get(date).slice().sort((a, b) => priority(a.title) - priority(b.title) || (a.title || '').localeCompare(b.title || ''));
+    const sessions = byDate.get(date).slice().sort(comparePlanRows);
     const [y, m, d] = date.split('-').map(x => parseInt(x, 10)); const weekday = (new Date(y, m - 1, d)).getDay();
     const wins = (studyWindows && studyWindows[String(weekday)] || []).map(w => ({ start: parseHM(w.start), end: parseHM(w.end) })).sort((a, b) => a.start - b.start);
     let winIdx = 0; let cursorMin = wins.length ? wins[0].start : 18 * 60;
@@ -894,14 +958,13 @@ function toScheduledICS(rows) {
 // Compute non-overlapping start/end times for GCal based on study windows
 function schedulePlan(rows, studyWindows) {
   const gapMinutes = 5;
-  const priority = title => (/^(r[ée]vision|review)\b/i.test(title || '')) ? 0 : 1;
   const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
   const byDate = new Map();
   for (const r of (rows || [])) { if (!r || !r.date) continue; if (!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
   const out = [];
   const sortedDates = Array.from(byDate.keys()).sort();
   for (const date of sortedDates) {
-    const list = byDate.get(date).slice().sort((a, b) => priority(a.title) - priority(b.title) || (a.title || '').localeCompare(b.title || ''));
+    const list = byDate.get(date).slice().sort(comparePlanRows);
     const [y, m, d] = date.split('-').map(x => parseInt(x, 10));
     const weekday = (new Date(y, (m - 1), d)).getDay();
     const wins = (studyWindows && studyWindows[String(weekday)] || []).map(w => ({ start: parseHM(w.start), end: parseHM(w.end) })).sort((a, b) => a.start - b.start);

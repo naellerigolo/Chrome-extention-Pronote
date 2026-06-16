@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "package": "node scripts/package-extension.js",
+    "release:check": "node scripts/validate-release.js && npm test && npm run package",
     "test": "node --test tests/*.test.js"
   }
 }

@@ -17,6 +17,7 @@ function loadBackgroundExports() {
 globalThis.__testExports = {
   applyPlanOverrides,
   buildRecurringOccurrences,
+  calculatePriorityScore,
   makeStudyPlan,
   parseICSHomework,
   resolveReminderISO,
@@ -232,4 +233,44 @@ test('applyPlanOverrides separates stale overrides and keeps manual sessions exp
   assert.equal(result.events[0].title, 'Moved Math');
   assert.equal(result.events[0].minutes, 35);
   assert.match(String(result.events[0].startDateTime), /T20:15:00/);
+});
+
+test('calculatePriorityScore favors hard tests over easy homework', () => {
+  const { calculatePriorityScore } = loadBackgroundExports();
+  const dueSoon = addDaysISO(2);
+  const hardTest = calculatePriorityScore({
+    subject: 'Physics',
+    dueDate: dueSoon,
+    type: 'test',
+    difficulty: 'hard',
+    notes: 'Long chapter review with formulas and exercises.'
+  });
+  const easyHomework = calculatePriorityScore({
+    subject: 'Art',
+    dueDate: addDaysISO(14),
+    type: 'homework',
+    difficulty: 'easy',
+    notes: 'Sketch.'
+  });
+
+  assert.ok(hardTest > easyHomework);
+  assert.ok(hardTest >= 75);
+});
+
+test('schedulePlan places higher-priority sessions earlier in the same day', () => {
+  const { schedulePlan } = loadBackgroundExports();
+  const date = addDaysISO(6);
+  const weekday = String(new Date(`${date}T00:00:00`).getDay());
+  const scheduled = schedulePlan([
+    { id: 'low', date, title: 'Homework Art', minutes: 30, priorityScore: 10 },
+    { id: 'high', date, title: 'Review Physics', minutes: 30, priorityScore: 90 }
+  ], {
+    [weekday]: [{ start: '09:00', end: '11:00' }]
+  });
+
+  const first = scheduled[0];
+  const second = scheduled[1];
+  assert.equal(first.id, 'high');
+  assert.equal(second.id, 'low');
+  assert.match(String(first.startDateTime), /T09:00:00/);
 });

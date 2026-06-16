@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PRONOTE Auto Homework & Study Plan (Lite)",
   "version": "1.4.0",
-  "description": "On PRONOTE student page load, extract the homework block and generate a simple study plan.",
+  "description": "Capture PRONOTE homework, plan study sessions, manage reminders, and optionally sync to Google Calendar.",
   "permissions": ["downloads", "storage", "unlimitedStorage", "tabs", "alarms", "identity", "notifications"],
   "host_permissions": [
     "https://*.index-education.net/pronote/*",
