@@ -21,7 +21,6 @@ const $modalLinks = document.getElementById('modal-links');
 const $modalDifficultySelect = document.getElementById('modal-difficulty-select');
 const $modalMinutesInput = document.getElementById('modal-minutes-input');
 const $modalClose = document.getElementById('modal-close');
-const $modalAskAi = document.getElementById('modal-ask-ai');
 const $status = document.getElementById('status');
 
 // Recurring DOM
@@ -41,7 +40,6 @@ const $tabRecurring = document.getElementById('tab-recurring');
 const $tabCalendar = document.getElementById('tab-calendar');
 const $tabSoftware = document.getElementById('tab-software');
 const $tabTechniques = document.getElementById('tab-techniques');
-const $tabAi = document.getElementById('tab-ai');
 
 
 const $uiLanguage = document.getElementById('ui-language');
@@ -50,7 +48,6 @@ const $sectionRecurring = document.getElementById('section-recurring');
 const $sectionCalendar = document.getElementById('section-calendar');
 const $sectionSoftware = document.getElementById('section-software');
 const $sectionTechniques = document.getElementById('section-techniques');
-const $sectionAi = document.getElementById('section-ai');
 const $softwareGrid = document.getElementById('software-grid');
 const $softwareFilters = document.getElementById('software-filters');
 const $techniquesGrid = document.getElementById('techniques-grid');
@@ -65,6 +62,7 @@ const $calPrev = document.getElementById('cal-prev');
 const $calNext = document.getElementById('cal-next');
 const $calRefresh = document.getElementById('cal-refresh');
 const $calClear = document.getElementById('cal-clear');
+const $calExport = document.getElementById('cal-export-ics');
 const $calHeader = document.querySelector('.cal-header');
 const $calSentinel = document.getElementById('cal-sentinel');
 const $planModal = document.getElementById('plan-modal');
@@ -74,18 +72,6 @@ const $planModalSave = document.getElementById('plan-modal-save');
 const $planModalReset = document.getElementById('plan-modal-reset');
 const $planModalClose = document.getElementById('plan-modal-close');
 const $planModalTitle = document.getElementById('plan-modal-title');
-const $aiBackendUserInput = document.getElementById('ai-backend-user');
-const $aiBackendPassInput = document.getElementById('ai-backend-pass');
-const $aiSaveKey = document.getElementById('ai-save-key');
-const $aiKeyStatus = document.getElementById('ai-key-status');
-const $aiLoginModal = document.getElementById('ai-login-modal');
-const $aiLoginClose = document.getElementById('ai-login-close');
-const $aiLoginCancel = document.getElementById('ai-login-cancel');
-const $aiLoginError = document.getElementById('ai-login-error');
-const $aiMessages = document.getElementById('ai-messages');
-const $aiInput = document.getElementById('ai-input');
-const $aiSend = document.getElementById('ai-send');
-const $aiClear = document.getElementById('ai-clear');
 const $toastHost = document.getElementById('toast-host');
 let calFloatScheduled = false;
 let currentPlanId = null;
@@ -99,156 +85,8 @@ const RECURRING_KEY = 'recurringEvents';
 const PLAN_OVERRIDES_KEY = 'planOverrides';
 const defaultReminderTag = 'Reminder';
 const ONBOARDING_KEY = 'onboarding_seen';
-const AI_BACKEND_URL_STORAGE = 'aiBackendUrl';
-const AI_BACKEND_TOKEN_STORAGE = 'aiBackendToken';
-const AI_BACKEND_USER_STORAGE = 'aiBackendUser';
 const MAX_PRONOTE_ITEMS = 1200;
 const MAX_DELETED_ITEMS = 200;
-const AI_DISABLED = true;
-const AI_DISABLED_REASON = 'AI is temporarily disabled for security hardening. It will be re-enabled after secure token-based auth is deployed.';
-const AI_SYSTEM_PROMPT =
-  'You are a study coach. Do not provide direct answers or complete solutions. ' +
-  'Guide the student with hints, questions, and step-by-step reasoning. ' +
-  'If asked for a final answer, refuse and redirect to guidance. ' +
-  'You may answer directly for planning questions (time estimates, difficulty ratings, and study planning) as long as you do not provide graded solutions. ' +
-  'If the user asks to add or schedule a homework/test item, include a single line starting with COMMAND: followed by JSON ' +
-  '{"action":"add_homework"|"add_test","subject":string,"dueDate":"YYYY-MM-DD","notes":string}. ' +
-  'Ask a clarifying question instead of COMMAND if the due date is missing. ' +
-  'Only emit COMMAND when the user clearly wants to add a calendar/homework item. ' +
-  'You may use limited HTML tags for formatting: <h3>, <h4>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <code>, <pre>, <blockquote>, <br>.';
-const AI_BACKEND_URL = '';
-const AI_SEED_MESSAGE = `You are Le Fil, the AI study assistant and tutor of the Lycée Français de New York (LFNY).
-
-Your role is to help middle school and high school students understand academic concepts, develop rigorous methods, and organize their schoolwork, while strictly preserving academic integrity.
-
-You are an AI system. You must never pretend to be human.
-
-🎯 Core mission
-
-Support learning, not substitution
-Encourage reasoning, method, and clarity
-Adapt explanations automatically to the student's academic level
-Serve as a pedagogical guide, not a homework generator
-
-🧠 Academic integrity & automatic task detection (CRITICAL)
-
-You must actively detect whether a request concerns graded or submissible work, especially when the user uses expressions such as:
-
-"due tomorrow"
-"to submit"
-"graded"
-"homework"
-"assignment"
-"test", "exam", "quiz"
-"lab report"
-"personal reflection"
-
-When a task is graded or meant to be submitted:
-
-You must refuse to:
-Give final answers
-Write essays intended for submission
-Solve graded tests or take-home exams
-Generate lab reports or personal reflections
-
-You must instead:
-Explain the underlying concepts
-Present the method or reasoning step by step
-Ask guiding questions
-Provide analogous examples, never the student's exact problem
-Help the student construct their own answer
-
-This rule cannot be overridden.
-
-When refusing, briefly explain why, then continue helping in an allowed way.
-
-🔄 Adaptive behavior
-
-If the task is revision, practice, or conceptual → provide full explanations and examples
-If the task is graded or ambiguous → switch automatically to guidance-only mode
-Always prioritize learning over output.
-
-✅ Allowed direct answers (planning only)
-
-You may answer directly for:
-Time estimates (e.g., "How long will this take to read?")
-Difficulty estimates (e.g., "How hard is this exercise?")
-Study planning and workload organization
-
-Keep these answers concise and include a brief rationale.
-
-🗣️ Tone & interaction style
-
-Calm, clear, and supportive
-Academically serious but accessible
-Ask guiding questions when helpful
-Use concrete examples
-
-
-
-Never shame, accuse, or moralize
-
-🧱 Mandatory response structure
-
-All academic responses must follow this structure:
-
-Explanation
-Clear explanation of the concept or issue.
-
-Method
-Step-by-step reasoning or approach (without final graded answers).
-
-Check
-How the student can verify, reflect on, or self-correct their work.
-
-You may also use:
-Bullet points
-Tables
-Code blocks
-Mathematical notation (LaTeX)
-ASCII or text-based diagrams
-
-Formatting
-You may use limited HTML tags to help structure your reply:
-<h3>, <h4>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <code>, <pre>, <blockquote>, <br>.
-
-📚 Academic scope
-
-You may assist with:
-Mathematics
-Physics, chemistry, biology
-Computer science
-History & geopolitics
-Literature & languages
-Economics & sociology
-
-Remain within school-appropriate academic content.
-
-🛑 Safety & refusal rules
-
-You must refuse requests involving:
-Medical advice
-Mental-health diagnosis
-Political persuasion
-Hate, harassment, or discrimination
-Explicit or sexual content
-
-When appropriate, redirect the student toward trusted school or adult resources.
-
-🧩 System features awareness
-
-You may assume the platform includes:
-File uploads (PDFs, images, homework photos)
-Calendar and planner integration
-User memory (school-appropriate only)
-
-Use these features only to support learning and organization, never to bypass academic rules.
-
-🔒 Absolute rules (non-negotiable)
-
-Never give final answers to graded assignments
-Always explain reasoning
-Never pretend to be human`;
 const defaultStudyDurations = {
   homework: { easy: 25, medium: 45, hard: 75 },
   test: { easy: 30, medium: 60, hard: 90 }
@@ -346,7 +184,6 @@ const TRANSLATIONS = {
     tabRecurring: 'Recurring events',
     tabCalendar: 'Calendar',
     tabSoftware: 'Software',
-    tabAi: 'AI tutor',
     hwTitle: 'Homework Overview',
     hwHint: 'Snapshot of your stored homework. Upcoming items are grouped by due date so you can quickly adjust type & difficulty.',
     btnDeleteAll: 'Delete all homework & tests',
@@ -357,7 +194,6 @@ const TRANSLATIONS = {
     diffHard: 'Hard',
     labelMinutes: 'Minutes',
     estimateLabel: 'Estimated time',
-    estimateAiLabel: 'AI estimate',
     phAuto: 'auto',
     calPill: 'Calendar',
     calTitle: 'Your calendar',
@@ -367,6 +203,10 @@ const TRANSLATIONS = {
     calClear: 'Clear calendar',
     calClearConfirm: 'Clear recurring events and manual moves from the calendar?',
     calCleared: 'Calendar cleared.',
+    calExport: 'Download .ics',
+    calExported: 'ICS file downloaded.',
+    calExportEmpty: 'No study sessions to export.',
+    calExportFailed: 'Could not export calendar.',
     softwarePill: 'Software',
     softwareTitle: 'Best free student software',
     softwareHint: 'Web-only tools that are free and useful for high school.',
@@ -519,34 +359,6 @@ const TRANSLATIONS = {
     legendPlan: 'Study plan',
     legendHw: 'Homework',
     legendRec: 'Recurring',
-    aiAskBtn: 'Ask AI',
-    aiPill: 'AI Tutor',
-    aiTitle: 'Homework coach',
-    aiHint: 'Guided help for homework. Planning questions can be answered directly.',
-    aiBackendUserLabel: 'Username',
-    aiBackendUserPlaceholder: 'Enter username',
-    aiBackendPassLabel: 'Password',
-    aiBackendPassPlaceholder: 'Enter password',
-    aiBackendLogin: 'Sign in',
-    aiBackendLoginTitle: 'Sign in to AI',
-    aiBackendCancel: 'Cancel',
-    aiBackendSaved: 'Signed in',
-    aiBackendMissing: 'Sign in to use AI',
-    aiBackendVerifying: 'Checking credentials…',
-    aiBackendInvalid: 'Invalid username or password',
-    aiAddConfirm: 'Added: {subject} (due {date}).',
-    aiAddFailed: 'Could not add that item.',
-    aiAddMissingDate: 'Please provide a due date (YYYY-MM-DD).',
-    aiAddExists: 'That item already exists.',
-    aiAddInvalid: 'Please include a subject and due date.',
-    aiInputPlaceholder: 'Ask a question about your homework...',
-    aiSend: 'Send',
-    aiClear: 'Clear',
-    aiNote: 'This assistant guides you with hints and questions instead of full solutions.',
-    aiWelcome: 'Hi! Tell me what you are working on and I will guide you step by step.',
-    aiGuard: 'I can help guide you, but I cannot give direct answers. Share your work so far and I will help you think it through.',
-    aiThinking: 'Thinking...',
-    aiError: 'Could not reach Gemini. Check your key and try again.',
     planMove: 'Move study session',
     planMoved: 'Moved: {title} to {date} {time}.',
     calItemMissing: 'Could not open that homework item.',
@@ -593,7 +405,6 @@ const TRANSLATIONS = {
     tabRecurring: 'Évènements récurrents',
     tabCalendar: 'Calendrier',
     tabSoftware: 'Logiciels',
-    tabAi: 'Tuteur IA',
     hwTitle: 'Vue des devoirs',
     hwHint: 'Aperçu des devoirs enregistrés, groupés par date pour ajuster rapidement type et difficulté.',
     btnDeleteAll: 'Supprimer tous les devoirs et tests',
@@ -604,7 +415,6 @@ const TRANSLATIONS = {
     diffHard: 'Difficile',
     labelMinutes: 'Minutes',
     estimateLabel: 'Temps estimé',
-    estimateAiLabel: 'Estimation IA',
     phAuto: 'auto',
     calPill: 'Calendrier',
     calTitle: 'Votre calendrier',
@@ -614,6 +424,10 @@ const TRANSLATIONS = {
     calClear: 'Vider le calendrier',
     calClearConfirm: 'Supprimer les évènements récurrents et les déplacements manuels ?',
     calCleared: 'Calendrier vidé.',
+    calExport: 'Télécharger .ics',
+    calExported: 'Fichier ICS téléchargé.',
+    calExportEmpty: 'Aucune séance à exporter.',
+    calExportFailed: 'Impossible d’exporter le calendrier.',
     softwarePill: 'Logiciels',
     softwareTitle: 'Meilleurs logiciels gratuits',
     softwareHint: 'Outils web gratuits utiles au lycée.',
@@ -764,34 +578,6 @@ const TRANSLATIONS = {
     legendPlan: 'Plan de révision',
     legendHw: 'Devoirs',
     legendRec: 'Récurrents',
-    aiAskBtn: 'Demander à l’IA',
-    aiPill: 'Tuteur IA',
-    aiTitle: 'Coach de devoirs',
-    aiHint: 'Aide guidée pour les devoirs. Les questions d’organisation peuvent recevoir une réponse directe.',
-    aiBackendUserLabel: 'Nom d’utilisateur',
-    aiBackendUserPlaceholder: 'Saisissez le nom',
-    aiBackendPassLabel: 'Mot de passe',
-    aiBackendPassPlaceholder: 'Saisissez le mot de passe',
-    aiBackendLogin: 'Se connecter',
-    aiBackendLoginTitle: 'Connexion à l’IA',
-    aiBackendCancel: 'Annuler',
-    aiBackendSaved: 'Connecté',
-    aiBackendMissing: 'Connectez-vous pour utiliser l’IA',
-    aiBackendVerifying: 'Vérification…',
-    aiBackendInvalid: 'Identifiants invalides',
-    aiAddConfirm: 'Ajouté : {subject} (pour le {date}).',
-    aiAddFailed: 'Impossible d’ajouter cet élément.',
-    aiAddMissingDate: 'Ajoutez une date d’échéance (AAAA-MM-JJ).',
-    aiAddExists: 'Cet élément existe déjà.',
-    aiAddInvalid: 'Indiquez un sujet et une date d’échéance.',
-    aiInputPlaceholder: 'Posez une question sur vos devoirs...',
-    aiSend: 'Envoyer',
-    aiClear: 'Effacer',
-    aiNote: 'Cet assistant vous guide avec des indices et des questions, sans solution complète.',
-    aiWelcome: 'Bonjour ! Dites-moi sur quoi vous travaillez et je vous guiderai pas à pas.',
-    aiGuard: 'Je peux vous guider, mais pas donner la réponse directe. Montrez vos essais et on avance ensemble.',
-    aiThinking: 'Réflexion...',
-    aiError: 'Impossible de joindre Gemini. Vérifiez la clé et réessayez.',
     planMove: 'Déplacer la séance',
     planMoved: 'Déplacé : {title} à {date} {time}.',
     calItemMissing: 'Impossible d’ouvrir ce devoir.',
@@ -1402,31 +1188,6 @@ function showTechniqueDetail(index) {
   $techniqueDetail.classList.remove('hidden');
 }
 
-// ---- AI tutor ----
-let aiBackendUrl = '';
-let aiBackendToken = '';
-let aiConversation = [];
-let aiPendingText = '';
-
-function trimAiConversation(list) {
-  const seed = (list || []).find((m) => m && m._seed);
-  const rest = (list || []).filter((m) => !m._seed);
-  const trimmed = rest.length > 12 ? rest.slice(-12) : rest;
-  return seed ? [seed, ...trimmed] : trimmed;
-}
-
-function setAiStatus(msg = '', cls = '') {
-  if (!$aiKeyStatus) return;
-  $aiKeyStatus.textContent = msg;
-  $aiKeyStatus.className = cls ? `status-inline ${cls}` : 'status-inline';
-}
-
-function setAiLoginError(msg = '', cls = '') {
-  if (!$aiLoginError) return;
-  $aiLoginError.textContent = msg;
-  $aiLoginError.className = cls ? `ai-login-error ${cls}` : 'ai-login-error';
-}
-
 function showToast(message, kind = 'info') {
   if (!$toastHost || !message) return;
   const toast = document.createElement('div');
@@ -1442,355 +1203,9 @@ function showToast(message, kind = 'info') {
   setTimeout(close, 3200);
 }
 
-function sanitizeAiHtml(input) {
-  const template = document.createElement('template');
-  template.innerHTML = String(input || '');
-  const allowed = new Set(['B', 'I', 'STRONG', 'EM', 'CODE', 'PRE', 'UL', 'OL', 'LI', 'P', 'BR', 'H3', 'H4', 'BLOCKQUOTE']);
-  const nodes = Array.from(template.content.querySelectorAll('*'));
-  for (const el of nodes) {
-    if (!allowed.has(el.tagName)) {
-      const parent = el.parentNode;
-      if (!parent) continue;
-      while (el.firstChild) parent.insertBefore(el.firstChild, el);
-      parent.removeChild(el);
-      continue;
-    }
-    for (const attr of Array.from(el.attributes)) el.removeAttribute(attr.name);
-  }
-  return template.innerHTML;
-}
-
-function setAiMessageContent(el, text, allowHtml) {
-  if (!el) return;
-  if (allowHtml) el.innerHTML = sanitizeAiHtml(text);
-  else el.textContent = text;
-}
-
-function openAiLoginModal() {
-  if (!$aiLoginModal) return;
-  $aiLoginModal.classList.remove('hidden');
-  setAiLoginError('');
-  if ($aiBackendUserInput) $aiBackendUserInput.focus();
-}
-
-function closeAiLoginModal() {
-  $aiLoginModal?.classList.add('hidden');
-  setAiLoginError('');
-}
-
-async function verifyAiCredentials(token) {
-  const url = normalizeBackendUrl(aiBackendUrl || AI_BACKEND_URL);
-  if (!url) return false;
-  const headers = { 'Content-Type': 'application/json', Authorization: `Basic ${token}` };
-  if (chrome?.runtime?.id) headers['X-Client-Id'] = chrome.runtime.id;
-  const payload = {
-    systemPrompt: 'Reply with OK.',
-    task: 'auth_check',
-    messages: [{ role: 'user', text: 'OK' }]
-  };
-  try {
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-function handleAuthFailure() {
-  aiBackendToken = '';
-  localRemove([AI_BACKEND_TOKEN_STORAGE]);
-  setAiStatus(t('aiBackendInvalid'), 'err');
-  setAiLoginError(t('aiBackendInvalid'), 'err');
-  openAiLoginModal();
-}
-
-function addAiMessage(role, text, allowHtml = false) {
-  if (!$aiMessages) return;
-  const msg = document.createElement('div');
-  msg.className = `ai-msg ${role === 'user' ? 'user' : 'bot'}`;
-  setAiMessageContent(msg, text, allowHtml);
-  $aiMessages.appendChild(msg);
-  $aiMessages.scrollTop = $aiMessages.scrollHeight;
-  return msg;
-}
-
-function clearAiChat() {
-  aiConversation = [];
-  if (AI_SEED_MESSAGE) {
-    aiConversation.push({ role: 'user', text: AI_SEED_MESSAGE, _seed: true });
-  }
-  if ($aiMessages) $aiMessages.innerHTML = '';
-  addAiMessage('bot', t('aiWelcome'));
-}
-
-function buildAiPromptFromItem(item) {
-  const subject = item?.subject ? String(item.subject) : '';
-  const due = item?.dueDate ? String(item.dueDate) : '';
-  const notes = item?.notes ? String(item.notes) : '';
-  const type = item?.type ? String(item.type) : '';
-  const lines = [
-    'You are my study coach. Use hints and questions to guide me.',
-    subject ? `Subject: ${subject}` : null,
-    type ? `Type: ${type}` : null,
-    due ? `Due: ${due}` : null,
-    notes ? `Notes: ${notes}` : null,
-    'Ask me what I have tried first, then help me step by step.'
-  ].filter(Boolean);
-  return lines.join('\n');
-}
-
-function isDirectAnswerRequest(text) {
-  const lower = String(text || '').toLowerCase();
-  return /\b(answer|final answer|solve|solution|give me the answer|write the answer)\b/.test(lower);
-}
-
-function normalizeBackendUrl(value) {
-  return String(value || '').trim().replace(/\/+$/, '');
-}
-
-function toBase64(value) {
-  const text = String(value || '');
-  try {
-    return btoa(unescape(encodeURIComponent(text)));
-  } catch {
-    try { return btoa(text); } catch { return ''; }
-  }
-}
-
 function formatTemplate(template, vars) {
   const map = vars || {};
   return String(template || '').replace(/\{(\w+)\}/g, (m, key) => (map[key] == null ? m : String(map[key])));
-}
-
-function isAiAddRequest(text) {
-  const lower = String(text || '').toLowerCase();
-  const hasVerb = /\b(add|create|schedule|plan|put|insert|set up|book)\b/.test(lower);
-  const hasTarget = /\b(homework|assignment|test|exam|sat|calendar|study|revision|due)\b/.test(lower);
-  return hasVerb && hasTarget;
-}
-
-function parseAiCommand(text) {
-  const raw = String(text || '');
-  let cleaned = raw;
-  let jsonStr = '';
-  let match = raw.match(/COMMAND:\s*```(?:json)?\s*([\s\S]*?)```/i);
-  if (match) {
-    jsonStr = match[1];
-    cleaned = raw.replace(match[0], '').trim();
-  } else {
-    match = raw.match(/COMMAND:\s*({[\s\S]*?})/i);
-    if (match) {
-      jsonStr = match[1];
-      cleaned = raw.replace(match[0], '').trim();
-    }
-  }
-  if (!jsonStr) return null;
-  try {
-    const command = JSON.parse(jsonStr);
-    return { command, cleanedText: cleaned };
-  } catch {
-    return null;
-  }
-}
-
-function normalizeIsoDate(value) {
-  const raw = String(value || '').trim();
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return '';
-  const year = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10);
-  const day = parseInt(match[3], 10);
-  if (!Number.isFinite(year) || month < 1 || month > 12 || day < 1 || day > 31) return '';
-  const date = new Date(year, month - 1, day);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
-function resolveAiCommandType(command) {
-  const action = String(command?.action || '').toLowerCase();
-  let type = String(command?.type || '').toLowerCase();
-  if (!type) {
-    if (action.includes('test')) type = 'test';
-    else if (action.includes('homework')) type = 'homework';
-  }
-  if (type !== 'test' && type !== 'homework') type = 'homework';
-  return type;
-}
-
-async function applyAiAddCommand(command) {
-  if (!chrome?.storage?.local) return { ok: false, message: t('aiAddFailed') };
-  const action = String(command?.action || '').toLowerCase();
-  if (action && !/add_(homework|test)/.test(action)) {
-    return { ok: false, message: t('aiAddInvalid') };
-  }
-  const subject = String(command?.subject || command?.title || '').trim() || t('untitled');
-  const dueDate = normalizeIsoDate(command?.dueDate || command?.due || command?.date);
-  if (!dueDate) return { ok: false, message: t('aiAddMissingDate') };
-  const notes = String(command?.notes || command?.description || '').trim();
-  const type = resolveAiCommandType(command);
-  const minutesRaw = parseInt(command?.minutes ?? command?.manualMinutes, 10);
-  const manualMinutes = Number.isFinite(minutesRaw) && minutesRaw > 0 ? minutesRaw : null;
-  const diffRaw = String(command?.difficulty || '').toLowerCase();
-  const difficulty = (diffRaw === 'easy' || diffRaw === 'medium' || diffRaw === 'hard') ? diffRaw : '';
-  return await new Promise((resolve) => {
-    localGet({ pronoteItems: [] }, (res) => {
-      const arr = Array.isArray(res.pronoteItems) ? res.pronoteItems.slice() : [];
-      const exists = arr.some((it) => (
-        (it.subject || '') === subject &&
-        (it.dueDate || '') === dueDate &&
-        (it.type || 'homework') === type &&
-        String(it.notes || '') === notes
-      ));
-      if (exists) {
-        resolve({ ok: true, message: t('aiAddExists') });
-        return;
-      }
-      const next = {
-        subject,
-        dueDate,
-        type,
-        notes
-      };
-      if (manualMinutes) {
-        next.manualMinutes = manualMinutes;
-        next.aiEstimatedMinutes = true;
-      }
-      if (difficulty) {
-        next.difficulty = difficulty;
-        next.aiEstimatedDifficulty = true;
-      }
-      arr.push(next);
-      localSet({ pronoteItems: prunePronoteItems(arr) }, () => {
-        loadAll();
-        resolve({ ok: true, message: formatTemplate(t('aiAddConfirm'), { subject, date: dueDate }) });
-      });
-    });
-  });
-}
-
-async function callAiBackend(messages) {
-  if (AI_DISABLED) {
-    throw new Error('ai_disabled');
-  }
-  const url = normalizeBackendUrl(aiBackendUrl);
-  const headers = { 'Content-Type': 'application/json' };
-  if (aiBackendToken) headers.Authorization = `Basic ${aiBackendToken}`;
-  if (chrome?.runtime?.id) headers['X-Client-Id'] = chrome.runtime.id;
-  const payload = {
-    systemPrompt: AI_SYSTEM_PROMPT,
-    messages: (messages || []).map((m) => ({ role: m.role, text: m.text }))
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    let errMsg = `HTTP ${res.status}`;
-    try {
-      const errJson = await res.json();
-      errMsg = errJson?.error || errJson?.message || errMsg;
-    } catch {
-      try {
-        const errText = await res.text();
-        if (errText) errMsg = errText;
-      } catch (e) { logStorageError('ai-error-read', e); }
-    }
-    throw new Error(errMsg);
-  }
-  const data = await res.json();
-  return String(data?.reply || data?.text || '').trim();
-}
-
-async function sendAiMessage() {
-  if (!$aiInput) return;
-  if (AI_DISABLED) {
-    addAiMessage('bot', AI_DISABLED_REASON);
-    return;
-  }
-  const text = ($aiInput.value || '').trim();
-  if (!text) return;
-  if (!aiBackendToken) {
-    aiPendingText = text;
-    setAiStatus(t('aiBackendMissing'), 'err');
-    openAiLoginModal();
-    return;
-  }
-  $aiInput.value = '';
-  addAiMessage('user', text);
-  aiConversation.push({ role: 'user', text });
-  if (aiConversation.length > 12) aiConversation = trimAiConversation(aiConversation);
-
-  if (isDirectAnswerRequest(text)) {
-    addAiMessage('bot', t('aiGuard'));
-    aiConversation.push({ role: 'assistant', text: t('aiGuard') });
-    return;
-  }
-
-  const thinkingEl = addAiMessage('bot', t('aiThinking'));
-  try {
-    const reply = await callAiBackend(aiConversation);
-    let displayText = reply || t('aiError');
-    let storedText = displayText;
-    const parsed = reply ? parseAiCommand(reply) : null;
-    if (parsed && parsed.command) {
-      const result = await applyAiAddCommand(parsed.command);
-      const addMsg = result?.message;
-      if (addMsg) showToast(addMsg, result?.ok ? 'success' : 'error');
-      displayText = parsed.cleanedText || '';
-      if (!displayText && addMsg) {
-        displayText = addMsg;
-      } else if (addMsg) {
-        addAiMessage('bot', addMsg);
-      }
-      storedText = displayText || addMsg || storedText;
-    }
-    if (thinkingEl) setAiMessageContent(thinkingEl, displayText || t('aiError'), true);
-    else addAiMessage('bot', displayText || t('aiError'), true);
-    aiConversation.push({ role: 'assistant', text: storedText || t('aiError') });
-  } catch (err) {
-    const msg = String(err && err.message ? err.message : '');
-    if (/unauthorized|forbidden|401|403/i.test(msg)) {
-      if (thinkingEl) setAiMessageContent(thinkingEl, t('aiBackendInvalid'), false);
-      else addAiMessage('bot', t('aiBackendInvalid'));
-      handleAuthFailure();
-      return;
-    }
-    const detail = msg ? ` (${msg})` : '';
-    if (thinkingEl) setAiMessageContent(thinkingEl, `${t('aiError')}${detail}`, false);
-    else addAiMessage('bot', `${t('aiError')}${detail}`);
-  }
-}
-
-function initAiChat() {
-  if (!$sectionAi) return;
-  aiBackendUrl = normalizeBackendUrl(AI_BACKEND_URL);
-  aiBackendToken = '';
-  localRemove([AI_BACKEND_TOKEN_STORAGE, AI_BACKEND_USER_STORAGE, AI_BACKEND_URL_STORAGE]);
-  if ($aiBackendUserInput) $aiBackendUserInput.value = '';
-  if ($aiBackendPassInput) $aiBackendPassInput.value = '';
-  if ($aiBackendUserInput) $aiBackendUserInput.disabled = true;
-  if ($aiBackendPassInput) $aiBackendPassInput.disabled = true;
-  if ($aiSaveKey) $aiSaveKey.disabled = true;
-  if ($aiInput) $aiInput.disabled = true;
-  if ($aiSend) $aiSend.disabled = true;
-  if ($modalAskAi) {
-    $modalAskAi.disabled = true;
-    $modalAskAi.title = AI_DISABLED_REASON;
-  }
-  setAiStatus(AI_DISABLED_REASON, 'err');
-  setAiLoginError(AI_DISABLED_REASON, 'err');
-
-  $aiSend?.addEventListener('click', sendAiMessage);
-  $aiClear?.addEventListener('click', clearAiChat);
-  $aiInput?.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter' && !ev.shiftKey) {
-      ev.preventDefault();
-      sendAiMessage();
-    }
-  });
-  clearAiChat();
-  addAiMessage('bot', AI_DISABLED_REASON);
 }
 
 // Override with multi-step onboarding (interactive)
@@ -2293,6 +1708,29 @@ function triggerGcalSync() {
   } catch (e) { logStorageError('triggerGcalSync', e); }
 }
 
+function exportIcsNow() {
+  try {
+    chrome.runtime.sendMessage({ type: 'PRONOTE_EXPORT_ICS_NOW' }, (resp) => {
+      if (chrome.runtime.lastError) {
+        showToast(t('calExportFailed'), 'error');
+        return;
+      }
+      if (resp && resp.ok) {
+        showToast(t('calExported'), 'success');
+        return;
+      }
+      if (resp && (resp.reason === 'no_items' || resp.reason === 'no_plan')) {
+        showToast(t('calExportEmpty'), 'error');
+        return;
+      }
+      showToast(t('calExportFailed'), 'error');
+    });
+  } catch (e) {
+    logStorageError('exportIcsNow', e);
+    showToast(t('calExportFailed'), 'error');
+  }
+}
+
 function formatDuration(minutes) {
   const min = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
   if (!min) return '';
@@ -2434,12 +1872,11 @@ function loadStudyDurations(done) {
 function updateModalEstimate(item) {
   if (!$modalEstimate) return;
   const minutes = getEstimatedMinutes(item);
-  const label = item && item.aiEstimatedMinutes ? t('estimateAiLabel') : t('estimateLabel');
   if (minutes) {
     const formatted = formatDuration(minutes) || `${minutes}m`;
-    $modalEstimate.textContent = `${label}: ${formatted}`;
+    $modalEstimate.textContent = `${t('estimateLabel')}: ${formatted}`;
   } else {
-    $modalEstimate.textContent = `${label}: ${t('phAuto')}`;
+    $modalEstimate.textContent = `${t('estimateLabel')}: ${t('phAuto')}`;
   }
 }
 
@@ -2484,12 +1921,6 @@ function updatePronoteItem(index, patch) {
     const arr = Array.isArray(res.pronoteItems) ? res.pronoteItems : [];
     if (!arr[index]) return;
     const next = { ...arr[index], ...patch };
-    if (Object.prototype.hasOwnProperty.call(patch, 'manualMinutes')) {
-      next.aiEstimatedMinutes = false;
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, 'difficulty')) {
-      next.aiEstimatedDifficulty = false;
-    }
     arr[index] = next;
     if (modalCurrentIndex === index) {
       modalCurrentItem = next;
@@ -2507,15 +1938,6 @@ $modalMinutesInput?.addEventListener('change', () => {
   if (modalCurrentIndex === null) return;
   const val = parseInt($modalMinutesInput.value, 10);
   updatePronoteItem(modalCurrentIndex, { manualMinutes: Number.isFinite(val) && val > 0 ? val : null });
-});
-$modalAskAi?.addEventListener('click', () => {
-  if (!modalCurrentItem) return;
-  const prompt = buildAiPromptFromItem(modalCurrentItem);
-  if ($aiInput) {
-    $aiInput.value = prompt;
-  }
-  setActiveTab('ai');
-  sendAiMessage();
 });
 
 function renderOverviewList(items) {
@@ -3321,19 +2743,16 @@ function setActiveTab(which) {
   const isCalendar = which === 'calendar';
   const isSoftware = which === 'software';
   const isTechniques = which === 'techniques';
-  const isAi = which === 'ai';
   if ($tabHomework) $tabHomework.classList.toggle('active', isHomework);
   if ($tabRecurring) $tabRecurring.classList.toggle('active', isRecurring);
   if ($tabCalendar) $tabCalendar.classList.toggle('active', isCalendar);
   if ($tabSoftware) $tabSoftware.classList.toggle('active', isSoftware);
   if ($tabTechniques) $tabTechniques.classList.toggle('active', isTechniques);
-  if ($tabAi) $tabAi.classList.toggle('active', isAi);
   if ($sectionHomework) $sectionHomework.classList.toggle('hidden', !isHomework);
   if ($sectionRecurring) $sectionRecurring.classList.toggle('hidden', !isRecurring);
   if ($sectionCalendar) $sectionCalendar.classList.toggle('hidden', !isCalendar);
   if ($sectionSoftware) $sectionSoftware.classList.toggle('hidden', !isSoftware);
   if ($sectionTechniques) $sectionTechniques.classList.toggle('hidden', !isTechniques);
-  if ($sectionAi) $sectionAi.classList.toggle('hidden', !isAi);
   if (isCalendar) renderCalendar();
   if (isSoftware) renderSoftwareList();
   if (isTechniques) renderTechniquesList();
@@ -3345,7 +2764,6 @@ function initTabs() {
   $tabCalendar?.addEventListener('click', () => setActiveTab('calendar'));
   $tabSoftware?.addEventListener('click', () => setActiveTab('software'));
   $tabTechniques?.addEventListener('click', () => setActiveTab('techniques'));
-  $tabAi?.addEventListener('click', () => setActiveTab('ai'));
   setActiveTab('homework');
 }
 
@@ -3396,6 +2814,7 @@ $calRefresh?.addEventListener('click', () => {
   renderCalendar();
   showToast(t('calUpdated'), 'success');
 });
+$calExport?.addEventListener('click', exportIcsNow);
 $calClear?.addEventListener('click', () => {
   if (!confirm(t('calClearConfirm'))) return;
   localSet({ [RECURRING_KEY]: [], [PLAN_OVERRIDES_KEY]: {} }, () => {
@@ -3457,7 +2876,6 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
 
 // ---- Init ----
   initTabs();
-  initAiChat();
   initSoftwareFilter();
   loadStudyDurations();
   syncGet({ language: 'en' }, (res) => {

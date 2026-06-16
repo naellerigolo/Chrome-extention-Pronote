@@ -19,6 +19,7 @@
   const reminderNote = document.getElementById('reminder-note');
   const reminderTagInput = document.getElementById('reminder-tag');
   const reminderSave = document.getElementById('reminder-save');
+  const reminderList = document.getElementById('reminder-list');
   const resetRescanBtn = document.getElementById('reset-and-rescan');
   let popupLinks = { ...defaultLinks };
   const setStatus = (t, isError) => {
@@ -138,6 +139,109 @@
     return d < today;
   }
 
+  function nextWeekdayDate(weekday) {
+    const map = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+    const target = map[String(weekday || '').toLowerCase()];
+    if (target == null) return null;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    let diff = target - d.getDay();
+    if (diff <= 0) diff += 7;
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  function reminderSortDate(reminder) {
+    if (reminder && reminder.weekday) return nextWeekdayDate(reminder.weekday);
+    return parseReminderDate(reminder);
+  }
+
+  function formatReminderDue(reminder) {
+    if (reminder && reminder.weekday) {
+      const label = String(reminder.weekday || '').trim();
+      return label ? `Next ${label.charAt(0).toUpperCase()}${label.slice(1)}` : 'No date';
+    }
+    const d = parseReminderDate(reminder);
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return 'No date';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderReminderList(reminders) {
+    if (!reminderList) return;
+    const arr = (Array.isArray(reminders) ? reminders : [])
+      .filter((it) => !reminderExpired(it))
+      .slice()
+      .sort((a, b) => {
+        const da = reminderSortDate(a);
+        const db = reminderSortDate(b);
+        const ta = da instanceof Date && !Number.isNaN(da.getTime()) ? da.getTime() : Number.MAX_SAFE_INTEGER;
+        const tb = db instanceof Date && !Number.isNaN(db.getTime()) ? db.getTime() : Number.MAX_SAFE_INTEGER;
+        return ta - tb || String(a?.title || a?.note || '').localeCompare(String(b?.title || b?.note || ''));
+      });
+    reminderList.innerHTML = '';
+    if (!arr.length) {
+      const empty = document.createElement('div');
+      empty.className = 'reminder-empty';
+      empty.textContent = 'No reminders yet.';
+      reminderList.appendChild(empty);
+      return;
+    }
+    arr.forEach((reminder) => {
+      const item = document.createElement('div');
+      item.className = 'reminder-item';
+
+      const main = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'reminder-item-title';
+      title.textContent = reminder.title || reminder.note || 'Reminder';
+      const meta = document.createElement('div');
+      meta.className = 'reminder-item-meta';
+      meta.textContent = [formatReminderDue(reminder), reminder.tag || ''].filter(Boolean).join(' • ');
+      main.append(title, meta);
+      if (reminder.note && reminder.note !== reminder.title) {
+        const note = document.createElement('div');
+        note.className = 'reminder-item-note';
+        note.textContent = reminder.note;
+        main.appendChild(note);
+      }
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'reminder-delete';
+      del.setAttribute('aria-label', 'Delete reminder');
+      del.textContent = '×';
+      del.addEventListener('click', () => deleteReminder(reminder.id));
+
+      item.append(main, del);
+      reminderList.appendChild(item);
+    });
+  }
+
+  function loadReminderList() {
+    if (!hasChromeApis()) return;
+    chrome.storage.local.get({ reminders: [] }, (res) => {
+      const src = Array.isArray(res.reminders) ? res.reminders : [];
+      const kept = src.filter((it) => !reminderExpired(it));
+      if (kept.length !== src.length) {
+        chrome.storage.local.set({ reminders: kept }, () => renderReminderList(kept));
+        return;
+      }
+      renderReminderList(kept);
+    });
+  }
+
+  function deleteReminder(id) {
+    if (!hasChromeApis()) return;
+    chrome.storage.local.get({ reminders: [] }, (res) => {
+      const src = Array.isArray(res.reminders) ? res.reminders : [];
+      const next = src.filter((it) => it && it.id !== id);
+      chrome.storage.local.set({ reminders: next }, () => {
+        renderReminderList(next);
+        setStatus('Reminder deleted.');
+      });
+    });
+  }
+
   function normalizeDueYear(dateText) {
     const ddmm = /^(\d{1,2})[\/](\d{1,2})$/.exec(String(dateText || '').trim());
     if (!ddmm) return null;
@@ -180,6 +284,7 @@
         if (reminderTagInput) reminderTagInput.value = '';
         if (reminderDateInput) reminderDateInput.value = '';
         if (reminderWeekdaySelect) reminderWeekdaySelect.value = '';
+        renderReminderList(arr);
         setStatus('Reminder saved.');
       });
     });
@@ -189,11 +294,13 @@
     reminderSave.addEventListener('click', saveReminder);
   }
 
-  chrome.storage.local.get({ reminders: [] }, (res) => {
-    const src = Array.isArray(res.reminders) ? res.reminders : [];
-    const kept = src.filter((it) => !reminderExpired(it));
-    if (kept.length !== src.length) chrome.storage.local.set({ reminders: kept });
-  });
+  loadReminderList();
+
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.reminders) loadReminderList();
+    });
+  } catch { }
 
   resetRescanBtn?.addEventListener('click', () => {
     if (!hasChromeApis()) return;
@@ -289,5 +396,5 @@
 
   // Initial check
   if (!hasChromeApis()) setStatus('Open via the extension icon in Chrome.', true);
-  else setStatus('AI tutor is temporarily disabled. Google sync uses the PRONOTE Planner calendar.');
+  else setStatus('Google sync uses the PRONOTE Planner calendar.');
 })();

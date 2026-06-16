@@ -1,14 +1,16 @@
 PRONOTE Planner (Lite) - Privacy Policy
 ======================================
 
-Last updated: 2026-03-06
+Last updated: 2026-06-16
 
 Summary
 -------
 - The extension runs locally in your browser.
-- AI chat/tutor features are currently disabled for security hardening.
+- The previous tutor feature has been removed; legacy local credentials are purged during startup.
 - PRONOTE page parsing and study planning happen on-device.
 - Google Calendar sync (if enabled) writes only to a dedicated extension-managed calendar named "PRONOTE Planner".
+- Calendar export can download a local `.ics` file for non-Google calendar apps.
+- Due-tomorrow notifications can summarize stored homework/tests and reminders.
 - Click capture does not collect form fields, passwords, or typed content.
 
 Data Processed
@@ -23,25 +25,33 @@ Data Processed
 - Storage: `chrome.storage.local` (`recurringEvents`, `planOverrides`).
 - Cleanup: stale overrides are pruned automatically when matching homework no longer exists.
 
-3) Google Calendar integration (optional)
+3) Manual reminders and notifications
+- Purpose: show dated or weekday reminders in the popup/planner and notify for due-tomorrow items.
+- Storage: `chrome.storage.local` (`reminders`, `lastDueNotifyDate`).
+- Notification content: item count plus short subject/reminder labels.
+
+4) Google Calendar integration (optional)
 - Scope: `https://www.googleapis.com/auth/calendar.app.created`.
 - Behavior: the extension creates or reuses one dedicated calendar (`gcalCalendarId`) and syncs only extension-managed events using a private `pronoteKey`.
 - It does not scan, modify, or delete unrelated events in your primary/personal calendars.
 
-4) Click/activity capture (optional)
+5) Calendar export
+- Purpose: download a local `.ics` file from stored homework, recurring events, and manual schedule overrides.
+- Storage/transport: generated locally through the browser downloads API.
+
+6) Click/activity capture (optional)
 - Captured metadata: interaction kind, timestamp, current URL.
 - Not captured: form input values, credentials, passwords, message bodies.
 - Purpose: trigger safer capture timing on PRONOTE pages.
 
-5) Optional ICS import
+7) Optional ICS import
 - If enabled, the extension fetches your configured ICS URL and merges new homework locally.
 - ICS URL is stored in sync settings; downloaded/generated files stay on your device.
 
-AI Status
----------
-- AI backend login, token storage, and chat execution are disabled.
-- Legacy local AI keys are purged during migration/startup.
-- No AI backend requests are made while disabled.
+Removed Tutor Cleanup
+---------------------
+- Legacy tutor credential keys are deleted during migration/startup.
+- No tutor backend requests are made.
 
 What We Do Not Do
 -----------------
@@ -52,6 +62,7 @@ What We Do Not Do
 Retention and Deletion
 ----------------------
 - Homework history and deleted history are bounded to reduce storage growth.
+- Expired dated reminders are pruned when reminder views load.
 - You can clear data by removing items in-app, resetting, or deleting extension storage in Chrome.
 - Uninstalling the extension removes extension-managed local storage.
 

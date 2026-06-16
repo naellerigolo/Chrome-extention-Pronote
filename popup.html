@@ -240,6 +240,65 @@
         min-height: 60px;
       }
 
+      .reminder-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      .reminder-empty {
+        color: var(--text-soft);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .reminder-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: start;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.5);
+        padding: 7px 8px;
+      }
+
+      .reminder-item-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-main);
+        overflow-wrap: anywhere;
+      }
+
+      .reminder-item-meta,
+      .reminder-item-note {
+        margin-top: 2px;
+        font-size: 10px;
+        color: var(--text-soft);
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      .reminder-delete {
+        min-width: 22px;
+        min-height: 22px;
+        padding: 0;
+        border-radius: 999px;
+        color: #fecaca;
+        background: rgba(127, 29, 29, 0.42);
+        border-color: rgba(248, 113, 113, 0.34);
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .reminder-delete:hover {
+        background: rgba(153, 27, 27, 0.64);
+        transform: none;
+        box-shadow: none;
+      }
+
       .reminder-date-row {
         display: flex;
         flex-direction: column;
@@ -445,7 +504,7 @@
 
       <div class="reminder-shell">
         <div class="group-label">Reminders</div>
-        <div class="hint">Create a reminder (it will save, but won’t show here).</div>
+        <div class="hint">Create a reminder — it shows below and notifies you the day before it’s due.</div>
         <div class="reminder-form">
           <input id="reminder-title" type="text" placeholder="Reminder title" />
           <textarea id="reminder-note" placeholder="What do you need to do?"></textarea>
@@ -471,6 +530,7 @@
           </div>
           <button id="reminder-save" class="primary full-width">Save reminder</button>
         </div>
+        <div id="reminder-list" class="reminder-list"></div>
       </div>
 
       <div class="group-label">Google Calendar sync</div>

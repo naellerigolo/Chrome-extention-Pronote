@@ -8,9 +8,6 @@ const defaultStudyDurations = {
 const EXTENSION_ID = chrome.runtime.id;
 const EXTENSION_URL = chrome.runtime.getURL('');
 const PRONOTE_PAGE_RE = /^https:\/\/[^/]+\.index-education\.net\/pronote\//i;
-const AI_BACKEND_TOKEN_STORAGE = 'aiBackendToken';
-const AI_BACKEND_USER_STORAGE = 'aiBackendUser';
-const AI_BACKEND_URL_STORAGE = 'aiBackendUrl';
 const GCAL_CAL_ID_KEY = 'gcalCalendarId';
 const EXT_STATE_VERSION_KEY = 'extensionStateVersion';
 const EXT_STATE_VERSION = 2;
@@ -89,7 +86,8 @@ async function runStartupMigration() {
     const pruned = prunePronoteItems(cfg.pronoteItems);
     if (pruned.length !== (cfg.pronoteItems || []).length) patch.pronoteItems = pruned;
     if (Object.keys(patch).length) await localSet(patch);
-    await localRemove([AI_BACKEND_TOKEN_STORAGE, AI_BACKEND_USER_STORAGE, AI_BACKEND_URL_STORAGE]);
+    // Purge any leftover credentials from the removed tutor feature.
+    await localRemove(['aiBackendToken', 'aiBackendUser', 'aiBackendUrl']);
   } catch (e) {
     warn('startup-migration', e);
   }
@@ -118,6 +116,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if ((msg.type === 'GET_LOCAL_SCHEDULE' ||
       msg.type === 'GCAL_LOGIN' ||
       msg.type === 'GCAL_SYNC_NOW' ||
+      msg.type === 'PRONOTE_EXPORT_ICS_NOW' ||
       msg.type === 'PRONOTE_IMPORT_ICS_NOW') && !fromExtensionPage) {
     sendResponse({ ok: false, error: 'forbidden' });
     return true;
@@ -226,6 +225,69 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         });
       } catch (e) { sendResponse({ ok: false, error: String(e) }); }
       finally { manualSyncInFlight = false; }
+    })();
+    return true;
+  }
+  if (msg.type === 'PRONOTE_EXPORT_ICS_NOW') {
+    (async () => {
+      try {
+        const storedObj = await localGet({ pronoteItems: [], recurringEvents: [], planOverrides: {} });
+        const items = Array.isArray(storedObj.pronoteItems) ? storedObj.pronoteItems : [];
+        const recurring = Array.isArray(storedObj.recurringEvents) ? storedObj.recurringEvents : [];
+        const overrides = storedObj.planOverrides || {};
+        if (!items.length && !recurring.length) {
+          sendResponse({ ok: false, reason: 'no_items' });
+          return;
+        }
+        const cfg = await syncGet({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' });
+        const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
+        const plan = makeStudyPlan(items, durations, cfg.language || 'en');
+        const recSlots = buildRecurringOccurrences(recurring, 365, cfg.language || 'en');
+        if ((!plan || plan.length === 0) && !recSlots.length) {
+          sendResponse({ ok: false, reason: 'no_plan' });
+          return;
+        }
+        const ovResult = applyPlanOverrides(plan, overrides, cfg.studyWindows, cfg.language || 'en');
+        const scheduled = (ovResult.events || []).concat(recSlots);
+        if (ovResult.staleOverrideIds && ovResult.staleOverrideIds.length) {
+          const next = { ...overrides };
+          for (const id of ovResult.staleOverrideIds) delete next[id];
+          await localSet({ planOverrides: next });
+        }
+        if (!scheduled.length) {
+          sendResponse({ ok: false, reason: 'no_plan' });
+          return;
+        }
+        const text = toScheduledICS(scheduled);
+        const filename = `pronote_study_plan_${ymdLocal(new Date())}.ics`;
+        const downloadId = await new Promise((resolve) => {
+          try {
+            chrome.downloads.download({
+              url: toDataUrl('text/calendar', text),
+              filename,
+              saveAs: true,
+              conflictAction: 'uniquify'
+            }, (id) => {
+              if (chrome.runtime.lastError) {
+                warn('ics-export-download', chrome.runtime.lastError.message);
+                resolve(null);
+                return;
+              }
+              resolve(id);
+            });
+          } catch (e) {
+            warn('ics-export-download', e);
+            resolve(null);
+          }
+        });
+        if (downloadId == null) {
+          sendResponse({ ok: false, error: 'download_failed' });
+          return;
+        }
+        sendResponse({ ok: true, count: scheduled.length, downloadId });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
     })();
     return true;
   }
@@ -339,6 +401,142 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try { refreshIcsIfEnabled(); } catch (e) { warn('ics-on-alarm', e); }
     });
   } catch (e) { warn('setup-ics-alarm', e); }
+})();
+
+// Daily "due tomorrow" notification for homework/tests and dated reminders.
+function ymdLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function resolveReminderISO(rem) {
+  try {
+    if (!rem) return null;
+    if (rem.weekday) {
+      const map = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+      const target = map[String(rem.weekday).toLowerCase()];
+      if (target == null) return null;
+      const d = new Date();
+      let diff = target - d.getDay();
+      if (diff <= 0) diff += 7; // "next" occurrence
+      d.setDate(d.getDate() + diff);
+      return ymdLocal(d);
+    }
+    const m = /^(\d{1,2})[\/](\d{1,2})$/.exec(String(rem.dateText || '').trim());
+    if (!m) return null;
+    const dd = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+    if (dd < 1 || dd > 31 || mm < 1 || mm > 12) return null;
+    const yr = parseInt(rem.dueYear, 10);
+    let year = Number.isFinite(yr) && yr >= 2000 ? yr : (new Date()).getFullYear();
+    if (!Number.isFinite(yr) || yr < 2000) {
+      const todayISO = ymdLocal(new Date());
+      const candidateISO = `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+      if (candidateISO < todayISO) year += 1;
+    }
+    return `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  } catch { return null; }
+}
+
+async function runDueNotifications() {
+  if (!chrome.notifications) return;
+  const today = new Date();
+  const todayISO = ymdLocal(today);
+  const tomorrowISO = ymdLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1));
+
+  // Fire at most once per calendar day, even if the service worker restarts.
+  const state = await localGet({ lastDueNotifyDate: '' });
+  if (state.lastDueNotifyDate === todayISO) return;
+
+  const stored = await localGet({ pronoteItems: [], reminders: [] });
+  const items = Array.isArray(stored.pronoteItems) ? stored.pronoteItems : [];
+  const reminders = Array.isArray(stored.reminders) ? stored.reminders : [];
+  const cfg = await syncGet({ language: 'en' });
+  const lang = cfg.language === 'fr' ? 'fr' : 'en';
+
+  const dueItems = items.filter(it => it && it.dueDate === tomorrowISO);
+  const dueReminders = reminders.filter(r => resolveReminderISO(r) === tomorrowISO);
+  const total = dueItems.length + dueReminders.length;
+  if (!total) { await localSet({ lastDueNotifyDate: todayISO }); return; }
+
+  const labels = [];
+  for (const it of dueItems) {
+    const subj = String(it.subject || (lang === 'fr' ? 'Sans titre' : 'Untitled')).trim();
+    const kind = (it.type === 'test') ? (lang === 'fr' ? 'éval.' : 'test') : (lang === 'fr' ? 'devoir' : 'hw');
+    labels.push(`${subj} (${kind})`);
+  }
+  for (const r of dueReminders) {
+    labels.push(String(r.title || r.note || (lang === 'fr' ? 'Rappel' : 'Reminder')).trim());
+  }
+
+  const title = lang === 'fr'
+    ? `${total} ${total > 1 ? 'éléments dus' : 'élément dû'} demain`
+    : `${total} item${total > 1 ? 's' : ''} due tomorrow`;
+  const shown = labels.slice(0, 6).join(' • ');
+  const more = labels.length > 6 ? (lang === 'fr' ? ` +${labels.length - 6} de plus` : ` +${labels.length - 6} more`) : '';
+
+  await new Promise(resolve => {
+    try {
+      chrome.notifications.create('pronote-due-' + todayISO, {
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('Icon/Logo_128.png'),
+        title,
+        message: shown + more,
+        priority: 1
+      }, () => { void chrome.runtime.lastError; resolve(); });
+    } catch { resolve(); }
+  });
+  await localSet({ lastDueNotifyDate: todayISO });
+}
+
+(function setupDueNotifyAlarm() {
+  try {
+    const NAME = 'pronote-due-notify';
+    const NOTIFY_HOUR = 17; // 5pm local: time to prep what's due tomorrow
+
+    function nextFireTime() {
+      const now = new Date();
+      const fire = new Date(now.getFullYear(), now.getMonth(), now.getDate(), NOTIFY_HOUR, 0, 0, 0);
+      if (fire.getTime() <= now.getTime()) fire.setDate(fire.getDate() + 1);
+      return fire.getTime();
+    }
+
+    function ensureAlarm() {
+      return new Promise(resolve => {
+        try {
+          chrome.storage.sync.get({ dueNotificationsEnabled: true }, (cfg) => {
+            chrome.alarms.get(NAME, (alarm) => {
+              try {
+                if (!cfg || cfg.dueNotificationsEnabled) {
+                  if (!alarm) chrome.alarms.create(NAME, { when: nextFireTime(), periodInMinutes: 24 * 60 });
+                } else if (alarm) {
+                  chrome.alarms.clear(NAME);
+                }
+              } catch (e) { warn('due-notify-ensure', e); }
+              resolve();
+            });
+          });
+        } catch (e) { warn('due-notify-ensure', e); resolve(); }
+      });
+    }
+
+    chrome.runtime.onInstalled.addListener(ensureAlarm);
+    chrome.runtime.onStartup.addListener(ensureAlarm);
+    chrome.storage.onChanged.addListener((chg, area) => {
+      if (area === 'sync' && chg.dueNotificationsEnabled) ensureAlarm();
+    });
+
+    chrome.alarms.onAlarm.addListener((a) => {
+      if (a.name !== NAME) return;
+      runDueNotifications().catch(e => warn('due-notify-run', e));
+    });
+
+    if (chrome.notifications && chrome.notifications.onClicked) {
+      chrome.notifications.onClicked.addListener((id) => {
+        if (!String(id).startsWith('pronote-due-')) return;
+        try { chrome.tabs.create({ url: chrome.runtime.getURL('options.html') }); } catch { }
+        try { chrome.notifications.clear(id); } catch { }
+      });
+    }
+  } catch (e) { warn('setup-due-notify-alarm', e); }
 })();
 
 async function refreshIcsIfEnabled() {
@@ -583,7 +781,7 @@ function toICS(rows, studyWindows) {
   const escText = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PRONOTE Auto Study Plan//EN'];
   const gapMinutes = 5; const fmtLocal = dt => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-  const priority = title => (/^r[ée]vision/i.test(title || '')) ? 0 : 1; const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
+  const priority = title => (/^(r[ée]vision|review)\b/i.test(title || '')) ? 0 : 1; const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
   const minutesToDate = (y, m, d, total) => new Date(y, m - 1, d, Math.floor(total / 60), total % 60, 0);
   const byDate = new Map(); for (const r of (rows || [])) { if (!r || !r.date) continue; if (!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
   let uidCounter = 0; const sortedDates = Array.from(byDate.keys()).sort();
@@ -608,10 +806,45 @@ function toICS(rows, studyWindows) {
   lines.push('END:VCALENDAR'); return lines.join('\n');
 }
 
+function toScheduledICS(rows) {
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const dtStamp = new Date();
+  const dtStampStr = `${dtStamp.getUTCFullYear()}${pad2(dtStamp.getUTCMonth() + 1)}${pad2(dtStamp.getUTCDate())}T${pad2(dtStamp.getUTCHours())}${pad2(dtStamp.getUTCMinutes())}${pad2(dtStamp.getUTCSeconds())}Z`;
+  const escText = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const fmtLocal = (value) => {
+    const d = value instanceof Date ? value : new Date(value);
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+  };
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PRONOTE Planner//EN'];
+  let uidCounter = 0;
+  for (const r of (rows || [])) {
+    if (!r) continue;
+    const mins = Math.max(5, parseInt(r.minutes, 10) || 30);
+    const startValue = r.startDateTime || (r.date ? rfc3339Local(r.date, 18, 0) : '');
+    const endValue = r.endDateTime || (startValue ? addMinutesRfc3339(startValue, mins) : '');
+    const start = fmtLocal(startValue);
+    const end = fmtLocal(endValue);
+    if (!start || !end) continue;
+    const seed = r.pronoteKey || r.id || `${r.date || ''}|${r.title || ''}|${uidCounter}`;
+    const uid = `${simpleHash(seed)}-${uidCounter++}@pronote-studyplan`;
+    lines.push('BEGIN:VEVENT');
+    lines.push(`DTSTAMP:${dtStampStr}`);
+    lines.push(`DTSTART:${start}`);
+    lines.push(`DTEND:${end}`);
+    lines.push(`SUMMARY:${escText(r.title || 'Study session')}`);
+    lines.push(`DESCRIPTION:${escText(r.notes || '')}`);
+    lines.push(`UID:${uid}`);
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\n');
+}
+
 // Compute non-overlapping start/end times for GCal based on study windows
 function schedulePlan(rows, studyWindows) {
   const gapMinutes = 5;
-  const priority = title => (/^r[ée]vision/i.test(title || '')) ? 0 : 1;
+  const priority = title => (/^(r[ée]vision|review)\b/i.test(title || '')) ? 0 : 1;
   const parseHM = t => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
   const byDate = new Map();
   for (const r of (rows || [])) { if (!r || !r.date) continue; if (!byDate.has(r.date)) byDate.set(r.date, []); byDate.get(r.date).push(r); }
