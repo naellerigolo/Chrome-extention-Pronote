@@ -22,6 +22,9 @@ Use this before uploading a new Chrome Web Store package.
   - Dragging a study session to another time.
   - Auto-fit week.
   - Start, pause, complete, and reset on a study session.
+- Open the settings page from the gear button and test:
+  - Study duration save/reset.
+  - Allowed time window save/reset.
   - Notification settings save and reload.
   - Backup export and import with a test backup.
   - Capture diagnostics display.
@@ -32,7 +35,7 @@ Use this before uploading a new Chrome Web Store package.
 - Confirm the extension captures homework without downloading scanner junk files.
 - Confirm homework appears in the popup and Options overview.
 - Confirm Calendar study sessions are generated from the captured items.
-- Confirm the capture diagnostics panel shows the latest scan time, source, and item count.
+- Confirm the settings page diagnostics panel shows the latest scan time, source, and item count.
 
 ## Calendar QA
 

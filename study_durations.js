@@ -27,6 +27,44 @@
     '6': [{ start: '10:00', end: '20:00' }]
   };
 
+  const RECURRING_KEY = 'recurringEvents';
+  const PLAN_OVERRIDES_KEY = 'planOverrides';
+  const STUDY_SESSIONS_KEY = 'studySessions';
+  const ONBOARDING_KEY = 'onboarding_seen';
+  const defaultNotificationPrefs = {
+    dueNotificationsEnabled: true,
+    dueNotifyHour: 17,
+    dueNotifyMinute: 0,
+    dueNotifyHomework: true,
+    dueNotifyReminders: true
+  };
+  const BACKUP_LOCAL_KEYS = [
+    'pronoteItems',
+    'pronoteDeletedItems',
+    'reminders',
+    RECURRING_KEY,
+    PLAN_OVERRIDES_KEY,
+    STUDY_SESSIONS_KEY,
+    'captureDiagnostics',
+    'gcalCalendarId',
+    'extensionStateVersion',
+    ONBOARDING_KEY
+  ];
+  const BACKUP_SYNC_KEYS = [
+    'language',
+    'timeFormat',
+    'studyDurations',
+    'studyWindows',
+    'autoGcalEnabled',
+    'icsEnabled',
+    'icsUrl',
+    'dueNotificationsEnabled',
+    'dueNotifyHour',
+    'dueNotifyMinute',
+    'dueNotifyHomework',
+    'dueNotifyReminders'
+  ];
+
   const $hwEasy = document.getElementById('dur-hw-easy');
   const $hwMed = document.getElementById('dur-hw-med');
   const $hwHard = document.getElementById('dur-hw-hard');
@@ -47,6 +85,20 @@
   const $saveWindows = document.getElementById('save-windows');
   const $resetWindows = document.getElementById('reset-windows');
   const $windowsStatus = document.getElementById('windows-status');
+  const $notifyEnabled = document.getElementById('notify-enabled');
+  const $notifyTime = document.getElementById('notify-time');
+  const $notifyHomework = document.getElementById('notify-homework');
+  const $notifyReminders = document.getElementById('notify-reminders');
+  const $notifySave = document.getElementById('notify-save');
+  const $notifyStatus = document.getElementById('notify-status');
+  const $backupExport = document.getElementById('backup-export');
+  const $backupImport = document.getElementById('backup-import');
+  const $backupImportFile = document.getElementById('backup-import-file');
+  const $backupStatus = document.getElementById('backup-status');
+  const $diagLastScan = document.getElementById('diag-last-scan');
+  const $diagStatus = document.getElementById('diag-status');
+  const $diagSource = document.getElementById('diag-source');
+  const $diagCount = document.getElementById('diag-count');
 
   let currentWindows = {};
   let dayCols = new Map();
@@ -90,6 +142,31 @@
       sdHelp: 'Tip: drag to create; drag edges to resize; click to delete.',
       sdSaveWindows: 'Save windows',
       sdResetWindows: 'Reset to defaults',
+      sdGeneralPill: 'General Settings',
+      sdGeneralTitle: 'Planner Settings',
+      sdGeneralHint: 'Manage notifications, backup, and capture diagnostics.',
+      sdNotifyTitle: 'Notifications',
+      sdNotifyEnabled: 'Due-tomorrow notifications',
+      sdNotifyTime: 'Notify at',
+      sdNotifyHomework: 'Homework and tests',
+      sdNotifyReminders: 'Reminders',
+      sdNotifySave: 'Save notifications',
+      sdNotifySaved: 'Notification settings saved.',
+      sdNotifyInvalidTime: 'Choose a valid notification time.',
+      sdBackupTitle: 'Backup',
+      sdBackupHint: 'Export or restore extension data as a JSON backup.',
+      sdBackupExport: 'Export backup',
+      sdBackupImport: 'Import backup',
+      sdBackupConfirm: 'Import this backup and replace matching local settings?',
+      sdBackupExported: 'Backup exported.',
+      sdBackupImported: 'Backup imported.',
+      sdBackupInvalid: 'That backup file could not be read.',
+      sdDiagnosticsTitle: 'Capture diagnostics',
+      sdDiagLastScan: 'Last scan',
+      sdDiagStatus: 'Status',
+      sdDiagSource: 'Source',
+      sdDiagCount: 'Items',
+      sdDiagEmpty: 'Never',
       monShort: 'Mon', tueShort: 'Tue', wedShort: 'Wed', thuShort: 'Thu', friShort: 'Fri', satShort: 'Sat', sunShort: 'Sun'
     },
     fr: {
@@ -127,6 +204,31 @@
       sdHelp: 'Astuce : glisser pour créer, glisser les bords pour ajuster, cliquer pour supprimer.',
       sdSaveWindows: 'Enregistrer les créneaux',
       sdResetWindows: 'Valeurs par défaut',
+      sdGeneralPill: 'Paramètres généraux',
+      sdGeneralTitle: 'Paramètres du planning',
+      sdGeneralHint: 'Gérez les notifications, les sauvegardes et le diagnostic de capture.',
+      sdNotifyTitle: 'Notifications',
+      sdNotifyEnabled: 'Notifications pour demain',
+      sdNotifyTime: 'Notifier à',
+      sdNotifyHomework: 'Devoirs et tests',
+      sdNotifyReminders: 'Rappels',
+      sdNotifySave: 'Enregistrer les notifications',
+      sdNotifySaved: 'Paramètres de notification enregistrés.',
+      sdNotifyInvalidTime: 'Choisissez une heure de notification valide.',
+      sdBackupTitle: 'Sauvegarde',
+      sdBackupHint: 'Exportez ou restaurez les données de l’extension en JSON.',
+      sdBackupExport: 'Exporter la sauvegarde',
+      sdBackupImport: 'Importer une sauvegarde',
+      sdBackupConfirm: 'Importer cette sauvegarde et remplacer les paramètres correspondants ?',
+      sdBackupExported: 'Sauvegarde exportée.',
+      sdBackupImported: 'Sauvegarde importée.',
+      sdBackupInvalid: 'Impossible de lire ce fichier de sauvegarde.',
+      sdDiagnosticsTitle: 'Diagnostic de capture',
+      sdDiagLastScan: 'Dernier scan',
+      sdDiagStatus: 'Statut',
+      sdDiagSource: 'Source',
+      sdDiagCount: 'Éléments',
+      sdDiagEmpty: 'Jamais',
       monShort: 'Lun', tueShort: 'Mar', wedShort: 'Mer', thuShort: 'Jeu', friShort: 'Ven', satShort: 'Sam', sunShort: 'Dim'
     }
   };
@@ -199,6 +301,78 @@
         $windowsStatus.textContent = '';
         $windowsStatus.className = 'status-inline';
       }, 1600);
+    }
+  }
+
+  function setInlineStatus(el, msg, cls) {
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = cls ? `status-inline ${cls}` : 'status-inline';
+  }
+
+  function logStorageError(scope, err) {
+    console.warn(`[study-settings:${scope}]`, err && err.message ? err.message : err);
+  }
+
+  function localGet(defaults, cb) {
+    try {
+      chrome.storage.local.get(defaults, (res) => {
+        if (chrome.runtime.lastError) logStorageError('localGet', chrome.runtime.lastError.message);
+        if (typeof cb === 'function') cb(res || defaults || {});
+      });
+    } catch (e) {
+      logStorageError('localGet', e);
+      if (typeof cb === 'function') cb(defaults || {});
+    }
+  }
+
+  function localSet(patch, cb) {
+    try {
+      chrome.storage.local.set(patch, () => {
+        if (chrome.runtime.lastError) logStorageError('localSet', chrome.runtime.lastError.message);
+        if (typeof cb === 'function') cb();
+      });
+    } catch (e) {
+      logStorageError('localSet', e);
+      if (typeof cb === 'function') cb();
+    }
+  }
+
+  function syncGet(defaults, cb) {
+    try {
+      chrome.storage.sync.get(defaults, (res) => {
+        if (chrome.runtime.lastError) logStorageError('syncGet', chrome.runtime.lastError.message);
+        if (typeof cb === 'function') cb(res || defaults || {});
+      });
+    } catch (e) {
+      logStorageError('syncGet', e);
+      if (typeof cb === 'function') cb(defaults || {});
+    }
+  }
+
+  function syncSet(patch, cb) {
+    try {
+      chrome.storage.sync.set(patch, () => {
+        if (chrome.runtime.lastError) logStorageError('syncSet', chrome.runtime.lastError.message);
+        if (typeof cb === 'function') cb();
+      });
+    } catch (e) {
+      logStorageError('syncSet', e);
+      if (typeof cb === 'function') cb();
+    }
+  }
+
+  function storageGetKeys(area, keys, cb) {
+    try {
+      const target = chrome.storage && chrome.storage[area];
+      if (!target) { cb({}); return; }
+      target.get(keys, (res) => {
+        if (chrome.runtime.lastError) logStorageError(`storageGetKeys-${area}`, chrome.runtime.lastError.message);
+        cb(res || {});
+      });
+    } catch (e) {
+      logStorageError(`storageGetKeys-${area}`, e);
+      cb({});
     }
   }
 
@@ -558,14 +732,157 @@
     renderBlocks();
   }
 
-  // Load existing durations
-  chrome.storage.sync.get({ studyDurations: defaultStudyDurations }, (res) => {
-    try {
-      applyToInputs(res.studyDurations || defaultStudyDurations);
-    } catch {
-      applyToInputs(defaultStudyDurations);
+  function loadStudyDurations() {
+    syncGet({ studyDurations: defaultStudyDurations }, (res) => {
+      try {
+        applyToInputs(res.studyDurations || defaultStudyDurations);
+      } catch {
+        applyToInputs(defaultStudyDurations);
+      }
+    });
+  }
+
+  function formatPrefTime(hour, minute) {
+    const hh = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
+    const mm = Math.max(0, Math.min(59, parseInt(minute, 10) || 0));
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+
+  function parsePrefTime(value) {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+    if (!match) return null;
+    const hour = parseInt(match[1], 10);
+    const minute = parseInt(match[2], 10);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return { hour, minute };
+  }
+
+  function loadNotificationSettings() {
+    if (!$notifyEnabled && !$notifyTime && !$notifyHomework && !$notifyReminders) return;
+    syncGet({ ...defaultNotificationPrefs }, (res) => {
+      if ($notifyEnabled) $notifyEnabled.checked = res.dueNotificationsEnabled !== false;
+      if ($notifyTime) $notifyTime.value = formatPrefTime(res.dueNotifyHour, res.dueNotifyMinute);
+      if ($notifyHomework) $notifyHomework.checked = res.dueNotifyHomework !== false;
+      if ($notifyReminders) $notifyReminders.checked = res.dueNotifyReminders !== false;
+    });
+  }
+
+  function saveNotificationSettings() {
+    const fallback = formatPrefTime(defaultNotificationPrefs.dueNotifyHour, defaultNotificationPrefs.dueNotifyMinute);
+    const parsed = parsePrefTime($notifyTime ? $notifyTime.value : fallback);
+    if (!parsed) {
+      setInlineStatus($notifyStatus, t('sdNotifyInvalidTime'), 'error');
+      return;
     }
-  });
+    syncSet({
+      dueNotificationsEnabled: !!($notifyEnabled && $notifyEnabled.checked),
+      dueNotifyHour: parsed.hour,
+      dueNotifyMinute: parsed.minute,
+      dueNotifyHomework: !$notifyHomework || $notifyHomework.checked !== false,
+      dueNotifyReminders: !$notifyReminders || $notifyReminders.checked !== false
+    }, () => {
+      setInlineStatus($notifyStatus, t('sdNotifySaved'), 'success');
+    });
+  }
+
+  function pickBackupPatch(src, allowedKeys) {
+    const out = {};
+    if (!src || typeof src !== 'object' || Array.isArray(src)) return out;
+    const allowed = new Set(allowedKeys || []);
+    for (const [key, value] of Object.entries(src)) {
+      if (!allowed.has(key)) continue;
+      if (/^ai/i.test(key)) continue;
+      out[key] = value;
+    }
+    return out;
+  }
+
+  function downloadTextFile(filename, mime, text) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportBackupData() {
+    storageGetKeys('local', BACKUP_LOCAL_KEYS, (localData) => {
+      storageGetKeys('sync', BACKUP_SYNC_KEYS, (syncData) => {
+        const exportedAt = new Date().toISOString();
+        const backup = {
+          schema: 'pronote-planner-backup',
+          version: 1,
+          exportedAt,
+          local: localData || {},
+          sync: syncData || {}
+        };
+        const day = exportedAt.slice(0, 10);
+        downloadTextFile(`pronote_planner_backup_${day}.json`, 'application/json', JSON.stringify(backup, null, 2));
+        setInlineStatus($backupStatus, t('sdBackupExported'), 'success');
+      });
+    });
+  }
+
+  function importBackupFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        const sourceLocal = parsed && typeof parsed.local === 'object' ? parsed.local : {};
+        const sourceSync = parsed && typeof parsed.sync === 'object' ? parsed.sync : {};
+        const localPatch = pickBackupPatch(sourceLocal, BACKUP_LOCAL_KEYS);
+        const syncPatch = pickBackupPatch(sourceSync, BACKUP_SYNC_KEYS);
+        if (!Object.keys(localPatch).length && !Object.keys(syncPatch).length) throw new Error('empty backup');
+        if (!confirm(t('sdBackupConfirm'))) return;
+        const finish = () => {
+          setInlineStatus($backupStatus, t('sdBackupImported'), 'success');
+          loadStudyDurations();
+          loadStudyWindows();
+          loadNotificationSettings();
+          loadDiagnostics();
+        };
+        const saveSync = () => {
+          if (!Object.keys(syncPatch).length) { finish(); return; }
+          syncSet(syncPatch, finish);
+        };
+        if (Object.keys(localPatch).length) localSet(localPatch, saveSync);
+        else saveSync();
+      } catch (e) {
+        logStorageError('importBackupFile', e);
+        setInlineStatus($backupStatus, t('sdBackupInvalid'), 'error');
+      } finally {
+        if ($backupImportFile) $backupImportFile.value = '';
+      }
+    };
+    reader.onerror = () => {
+      setInlineStatus($backupStatus, t('sdBackupInvalid'), 'error');
+      if ($backupImportFile) $backupImportFile.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  function formatDiagnosticsDate(value) {
+    if (!value) return t('sdDiagEmpty');
+    const d = new Date(value);
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-US');
+  }
+
+  function loadDiagnostics() {
+    if (!$diagLastScan && !$diagStatus && !$diagSource && !$diagCount) return;
+    localGet({ captureDiagnostics: {} }, (res) => {
+      const diag = res.captureDiagnostics || {};
+      if ($diagLastScan) $diagLastScan.textContent = formatDiagnosticsDate(diag.lastScanAt || diag.updatedAt);
+      if ($diagStatus) $diagStatus.textContent = diag.status || '-';
+      if ($diagSource) $diagSource.textContent = diag.source || '-';
+      if ($diagCount) $diagCount.textContent = Number.isFinite(parseInt(diag.itemCount, 10)) ? String(parseInt(diag.itemCount, 10)) : '-';
+    });
+  }
 
   // Save button
   $save.addEventListener('click', () => {
@@ -652,6 +969,7 @@
       buildGrid();
       buildClassic();
       renderBlocks();
+      loadDiagnostics();
     });
     $sdLanguage.addEventListener('change', () => {
       currentLang = $sdLanguage.value === 'fr' ? 'fr' : 'en';
@@ -660,6 +978,7 @@
       buildGrid();
       buildClassic();
       renderBlocks();
+      loadDiagnostics();
     });
     if ($sdTimeFormat) {
       $sdTimeFormat.addEventListener('change', () => {
@@ -689,6 +1008,35 @@
     document.querySelectorAll('.minutes-suffix').forEach((el) => { el.textContent = t('sdMin'); });
   }
 
+  $notifySave?.addEventListener('click', saveNotificationSettings);
+  $backupExport?.addEventListener('click', exportBackupData);
+  $backupImport?.addEventListener('click', () => $backupImportFile?.click());
+  $backupImportFile?.addEventListener('change', () => importBackupFile($backupImportFile.files && $backupImportFile.files[0]));
+
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (!changes) return;
+      if (area === 'local' && changes.captureDiagnostics) {
+        loadDiagnostics();
+      }
+      if (area === 'sync') {
+        if (
+          changes.dueNotificationsEnabled ||
+          changes.dueNotifyHour ||
+          changes.dueNotifyMinute ||
+          changes.dueNotifyHomework ||
+          changes.dueNotifyReminders
+        ) {
+          loadNotificationSettings();
+        }
+        if (changes.studyDurations) loadStudyDurations();
+        if (changes.studyWindows) loadStudyWindows();
+      }
+    });
+  } catch (e) {
+    logStorageError('storage-onChanged', e);
+  }
+
   if ($viewToggle) {
     $viewToggle.addEventListener('change', () => {
       const calendarMode = $viewToggle.checked;
@@ -702,7 +1050,10 @@
     });
   }
 
+  loadStudyDurations();
   buildGrid();
   loadStudyWindows();
+  loadNotificationSettings();
+  loadDiagnostics();
   initLanguagePicker();
 })();

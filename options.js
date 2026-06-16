@@ -40,7 +40,6 @@ const $tabRecurring = document.getElementById('tab-recurring');
 const $tabCalendar = document.getElementById('tab-calendar');
 const $tabSoftware = document.getElementById('tab-software');
 const $tabTechniques = document.getElementById('tab-techniques');
-const $tabSettings = document.getElementById('tab-settings');
 
 
 const $uiLanguage = document.getElementById('ui-language');
@@ -49,7 +48,6 @@ const $sectionRecurring = document.getElementById('section-recurring');
 const $sectionCalendar = document.getElementById('section-calendar');
 const $sectionSoftware = document.getElementById('section-software');
 const $sectionTechniques = document.getElementById('section-techniques');
-const $sectionSettings = document.getElementById('section-settings');
 const $homeworkFilterQuery = document.getElementById('homework-filter-query');
 const $homeworkFilterType = document.getElementById('homework-filter-type');
 const $homeworkFilterDifficulty = document.getElementById('homework-filter-difficulty');
@@ -93,20 +91,6 @@ const $studySessionDone = document.getElementById('study-session-done');
 const $studySessionReset = document.getElementById('study-session-reset');
 const $studySessionOpenHomework = document.getElementById('study-session-open-homework');
 const $toastHost = document.getElementById('toast-host');
-const $notifyEnabled = document.getElementById('notify-enabled');
-const $notifyTime = document.getElementById('notify-time');
-const $notifyHomework = document.getElementById('notify-homework');
-const $notifyReminders = document.getElementById('notify-reminders');
-const $notifySave = document.getElementById('notify-save');
-const $notifyStatus = document.getElementById('notify-status');
-const $backupExport = document.getElementById('backup-export');
-const $backupImport = document.getElementById('backup-import');
-const $backupImportFile = document.getElementById('backup-import-file');
-const $backupStatus = document.getElementById('backup-status');
-const $diagLastScan = document.getElementById('diag-last-scan');
-const $diagStatus = document.getElementById('diag-status');
-const $diagSource = document.getElementById('diag-source');
-const $diagCount = document.getElementById('diag-count');
 let calFloatScheduled = false;
 let currentPlanId = null;
 let dragPlan = null;
@@ -136,38 +120,6 @@ const defaultStudyWindows = {
   '6': [{ start: '10:00', end: '20:00' }],
   '0': [{ start: '10:00', end: '20:00' }]
 };
-const defaultNotificationPrefs = {
-  dueNotificationsEnabled: true,
-  dueNotifyHour: 17,
-  dueNotifyMinute: 0,
-  dueNotifyHomework: true,
-  dueNotifyReminders: true
-};
-const BACKUP_LOCAL_KEYS = [
-  'pronoteItems',
-  'pronoteDeletedItems',
-  'reminders',
-  RECURRING_KEY,
-  PLAN_OVERRIDES_KEY,
-  STUDY_SESSIONS_KEY,
-  'captureDiagnostics',
-  'gcalCalendarId',
-  'extensionStateVersion',
-  ONBOARDING_KEY
-];
-const BACKUP_SYNC_KEYS = [
-  'language',
-  'studyDurations',
-  'studyWindows',
-  'autoGcalEnabled',
-  'icsEnabled',
-  'icsUrl',
-  'dueNotificationsEnabled',
-  'dueNotifyHour',
-  'dueNotifyMinute',
-  'dueNotifyHomework',
-  'dueNotifyReminders'
-];
 const homeworkFilters = {
   query: '',
   type: 'all',
@@ -261,7 +213,6 @@ const TRANSLATIONS = {
     tabRecurring: 'Recurring events',
     tabCalendar: 'Calendar',
     tabSoftware: 'Software',
-    tabSettings: 'Settings',
     hwTitle: 'Homework Overview',
     hwHint: 'Snapshot of your stored homework. Upcoming items are grouped by due date so you can quickly adjust type & difficulty.',
     btnDeleteAll: 'Delete all homework & tests',
@@ -501,31 +452,6 @@ const TRANSLATIONS = {
     noEvents: 'No events in this week.',
     studySession: 'Study session',
     manual: 'manual',
-    settingsPill: 'Settings',
-    settingsTitle: 'Settings',
-    settingsHint: 'Manage notifications, backup, and capture diagnostics.',
-    notifyTitle: 'Notifications',
-    notifyEnabled: 'Due-tomorrow notifications',
-    notifyTime: 'Notify at',
-    notifyHomework: 'Homework and tests',
-    notifyReminders: 'Reminders',
-    notifySave: 'Save notifications',
-    notifySaved: 'Notification settings saved.',
-    notifyInvalidTime: 'Choose a valid notification time.',
-    backupTitle: 'Backup',
-    backupHint: 'Export or restore extension data as a JSON backup.',
-    backupExport: 'Export backup',
-    backupImport: 'Import backup',
-    backupConfirm: 'Import this backup and replace matching local settings?',
-    backupExported: 'Backup exported.',
-    backupImported: 'Backup imported.',
-    backupInvalid: 'That backup file could not be read.',
-    diagnosticsTitle: 'Capture diagnostics',
-    diagLastScan: 'Last scan',
-    diagStatus: 'Status',
-    diagSource: 'Source',
-    diagCount: 'Items',
-    diagEmpty: 'Never',
     langLabel: 'Language',
     langEn: 'English',
     langFr: 'French'
@@ -539,7 +465,6 @@ const TRANSLATIONS = {
     tabRecurring: 'Évènements récurrents',
     tabCalendar: 'Calendrier',
     tabSoftware: 'Logiciels',
-    tabSettings: 'Paramètres',
     hwTitle: 'Vue des devoirs',
     hwHint: 'Aperçu des devoirs enregistrés, groupés par date pour ajuster rapidement type et difficulté.',
     btnDeleteAll: 'Supprimer tous les devoirs et tests',
@@ -777,31 +702,6 @@ const TRANSLATIONS = {
     noEvents: 'Aucun évènement cette semaine.',
     studySession: 'Séance de révision',
     manual: 'manuel',
-    settingsPill: 'Paramètres',
-    settingsTitle: 'Paramètres',
-    settingsHint: 'Gérez les notifications, les sauvegardes et le diagnostic de capture.',
-    notifyTitle: 'Notifications',
-    notifyEnabled: 'Notifications pour demain',
-    notifyTime: 'Notifier à',
-    notifyHomework: 'Devoirs et tests',
-    notifyReminders: 'Rappels',
-    notifySave: 'Enregistrer les notifications',
-    notifySaved: 'Paramètres de notification enregistrés.',
-    notifyInvalidTime: 'Choisissez une heure de notification valide.',
-    backupTitle: 'Sauvegarde',
-    backupHint: 'Exportez ou restaurez les données de l’extension en JSON.',
-    backupExport: 'Exporter la sauvegarde',
-    backupImport: 'Importer une sauvegarde',
-    backupConfirm: 'Importer cette sauvegarde et remplacer les paramètres correspondants ?',
-    backupExported: 'Sauvegarde exportée.',
-    backupImported: 'Sauvegarde importée.',
-    backupInvalid: 'Impossible de lire ce fichier de sauvegarde.',
-    diagnosticsTitle: 'Diagnostic de capture',
-    diagLastScan: 'Dernier scan',
-    diagStatus: 'Statut',
-    diagSource: 'Source',
-    diagCount: 'Éléments',
-    diagEmpty: 'Jamais',
     langLabel: 'Langue',
     langEn: 'Anglais',
     langFr: 'Français'
@@ -1157,7 +1057,6 @@ function setLanguage(lang, persist = true) {
   buildSoftwareFilterOptions();
   loadAll();
   loadRecurring();
-  loadDiagnostics();
   renderCalendar();
 }
 
@@ -1398,174 +1297,6 @@ function showToast(message, kind = 'info') {
 function formatTemplate(template, vars) {
   const map = vars || {};
   return String(template || '').replace(/\{(\w+)\}/g, (m, key) => (map[key] == null ? m : String(map[key])));
-}
-
-function setInlineStatus(el, message = '', kind = '') {
-  if (!el) return;
-  el.textContent = message;
-  el.className = kind ? `status-inline ${kind}` : 'status-inline';
-  el.style.color = kind === 'error' ? '#fecaca' : (kind === 'success' ? '#bbf7d0' : '');
-}
-
-function formatPrefTime(hour, minute) {
-  const hh = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
-  const mm = Math.max(0, Math.min(59, parseInt(minute, 10) || 0));
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
-
-function parsePrefTime(value) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
-  if (!match) return null;
-  const hour = parseInt(match[1], 10);
-  const minute = parseInt(match[2], 10);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-  return { hour, minute };
-}
-
-function loadNotificationSettings() {
-  if (!$notifyEnabled && !$notifyTime && !$notifyHomework && !$notifyReminders) return;
-  syncGet({ ...defaultNotificationPrefs }, (res) => {
-    if ($notifyEnabled) $notifyEnabled.checked = res.dueNotificationsEnabled !== false;
-    if ($notifyTime) $notifyTime.value = formatPrefTime(res.dueNotifyHour, res.dueNotifyMinute);
-    if ($notifyHomework) $notifyHomework.checked = res.dueNotifyHomework !== false;
-    if ($notifyReminders) $notifyReminders.checked = res.dueNotifyReminders !== false;
-  });
-}
-
-function saveNotificationSettings() {
-  const parsed = parsePrefTime($notifyTime?.value || formatPrefTime(defaultNotificationPrefs.dueNotifyHour, defaultNotificationPrefs.dueNotifyMinute));
-  if (!parsed) {
-    setInlineStatus($notifyStatus, t('notifyInvalidTime'), 'error');
-    return;
-  }
-  syncSet({
-    dueNotificationsEnabled: !!$notifyEnabled?.checked,
-    dueNotifyHour: parsed.hour,
-    dueNotifyMinute: parsed.minute,
-    dueNotifyHomework: $notifyHomework?.checked !== false,
-    dueNotifyReminders: $notifyReminders?.checked !== false
-  }, () => {
-    setInlineStatus($notifyStatus, t('notifySaved'), 'success');
-    showToast(t('notifySaved'), 'success');
-  });
-}
-
-function storageGetKeys(area, keys, cb) {
-  try {
-    const target = chrome?.storage?.[area];
-    if (!target) { cb({}); return; }
-    target.get(keys, (res) => {
-      if (chrome.runtime.lastError) logStorageError(`storageGetKeys-${area}`, chrome.runtime.lastError.message);
-      cb(res || {});
-    });
-  } catch (e) {
-    logStorageError(`storageGetKeys-${area}`, e);
-    cb({});
-  }
-}
-
-function pickBackupPatch(src, allowedKeys) {
-  const out = {};
-  if (!src || typeof src !== 'object' || Array.isArray(src)) return out;
-  const allowed = new Set(allowedKeys || []);
-  for (const [key, value] of Object.entries(src)) {
-    if (!allowed.has(key)) continue;
-    if (/^ai/i.test(key)) continue;
-    out[key] = value;
-  }
-  return out;
-}
-
-function downloadTextFile(filename, mime, text) {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function exportBackupData() {
-  storageGetKeys('local', BACKUP_LOCAL_KEYS, (localData) => {
-    storageGetKeys('sync', BACKUP_SYNC_KEYS, (syncData) => {
-      const exportedAt = new Date().toISOString();
-      const backup = {
-        schema: 'pronote-planner-backup',
-        version: 1,
-        exportedAt,
-        local: localData || {},
-        sync: syncData || {}
-      };
-      const day = exportedAt.slice(0, 10);
-      downloadTextFile(`pronote_planner_backup_${day}.json`, 'application/json', JSON.stringify(backup, null, 2));
-      setInlineStatus($backupStatus, t('backupExported'), 'success');
-      showToast(t('backupExported'), 'success');
-    });
-  });
-}
-
-function importBackupFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(String(reader.result || '{}'));
-      const sourceLocal = parsed && typeof parsed.local === 'object' ? parsed.local : {};
-      const sourceSync = parsed && typeof parsed.sync === 'object' ? parsed.sync : {};
-      const localPatch = pickBackupPatch(sourceLocal, BACKUP_LOCAL_KEYS);
-      const syncPatch = pickBackupPatch(sourceSync, BACKUP_SYNC_KEYS);
-      if (!Object.keys(localPatch).length && !Object.keys(syncPatch).length) throw new Error('empty backup');
-      if (!confirm(t('backupConfirm'))) return;
-      const finish = () => {
-        setInlineStatus($backupStatus, t('backupImported'), 'success');
-        showToast(t('backupImported'), 'success');
-        loadStudyDurations();
-        loadNotificationSettings();
-        loadDiagnostics();
-        loadRecurring();
-        loadAll();
-        triggerGcalSync();
-      };
-      const saveSync = () => {
-        if (!Object.keys(syncPatch).length) { finish(); return; }
-        syncSet(syncPatch, finish);
-      };
-      if (Object.keys(localPatch).length) localSet(localPatch, saveSync);
-      else saveSync();
-    } catch (e) {
-      logStorageError('importBackupFile', e);
-      setInlineStatus($backupStatus, t('backupInvalid'), 'error');
-      showToast(t('backupInvalid'), 'error');
-    } finally {
-      if ($backupImportFile) $backupImportFile.value = '';
-    }
-  };
-  reader.onerror = () => {
-    setInlineStatus($backupStatus, t('backupInvalid'), 'error');
-    if ($backupImportFile) $backupImportFile.value = '';
-  };
-  reader.readAsText(file);
-}
-
-function formatDiagnosticsDate(value) {
-  if (!value) return t('diagEmpty');
-  const d = new Date(value);
-  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-US');
-}
-
-function loadDiagnostics() {
-  if (!$diagLastScan && !$diagStatus && !$diagSource && !$diagCount) return;
-  localGet({ captureDiagnostics: {} }, (res) => {
-    const diag = res.captureDiagnostics || {};
-    if ($diagLastScan) $diagLastScan.textContent = formatDiagnosticsDate(diag.lastScanAt || diag.updatedAt);
-    if ($diagStatus) $diagStatus.textContent = diag.status || '-';
-    if ($diagSource) $diagSource.textContent = diag.source || '-';
-    if ($diagCount) $diagCount.textContent = Number.isFinite(parseInt(diag.itemCount, 10)) ? String(parseInt(diag.itemCount, 10)) : '-';
-  });
 }
 
 // Override with multi-step onboarding (interactive)
@@ -3571,26 +3302,19 @@ function setActiveTab(which) {
   const isCalendar = which === 'calendar';
   const isSoftware = which === 'software';
   const isTechniques = which === 'techniques';
-  const isSettings = which === 'settings';
   if ($tabHomework) $tabHomework.classList.toggle('active', isHomework);
   if ($tabRecurring) $tabRecurring.classList.toggle('active', isRecurring);
   if ($tabCalendar) $tabCalendar.classList.toggle('active', isCalendar);
   if ($tabSoftware) $tabSoftware.classList.toggle('active', isSoftware);
   if ($tabTechniques) $tabTechniques.classList.toggle('active', isTechniques);
-  if ($tabSettings) $tabSettings.classList.toggle('active', isSettings);
   if ($sectionHomework) $sectionHomework.classList.toggle('hidden', !isHomework);
   if ($sectionRecurring) $sectionRecurring.classList.toggle('hidden', !isRecurring);
   if ($sectionCalendar) $sectionCalendar.classList.toggle('hidden', !isCalendar);
   if ($sectionSoftware) $sectionSoftware.classList.toggle('hidden', !isSoftware);
   if ($sectionTechniques) $sectionTechniques.classList.toggle('hidden', !isTechniques);
-  if ($sectionSettings) $sectionSettings.classList.toggle('hidden', !isSettings);
   if (isCalendar) renderCalendar();
   if (isSoftware) renderSoftwareList();
   if (isTechniques) renderTechniquesList();
-  if (isSettings) {
-    loadNotificationSettings();
-    loadDiagnostics();
-  }
 }
 
 function initTabs() {
@@ -3599,7 +3323,6 @@ function initTabs() {
   $tabCalendar?.addEventListener('click', () => setActiveTab('calendar'));
   $tabSoftware?.addEventListener('click', () => setActiveTab('software'));
   $tabTechniques?.addEventListener('click', () => setActiveTab('techniques'));
-  $tabSettings?.addEventListener('click', () => setActiveTab('settings'));
   setActiveTab('homework');
 }
 
@@ -3659,10 +3382,6 @@ $calRefresh?.addEventListener('click', () => {
 });
 $calAutoFit?.addEventListener('click', autoFitCurrentWeek);
 $calExport?.addEventListener('click', exportIcsNow);
-$notifySave?.addEventListener('click', saveNotificationSettings);
-$backupExport?.addEventListener('click', exportBackupData);
-$backupImport?.addEventListener('click', () => $backupImportFile?.click());
-$backupImportFile?.addEventListener('change', () => importBackupFile($backupImportFile.files && $backupImportFile.files[0]));
 $studySessionClose?.addEventListener('click', closeStudySessionModal);
 $studySessionModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeStudySessionModal);
 $studySessionStart?.addEventListener('click', startCurrentStudySession);
@@ -3733,8 +3452,6 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
   initTabs();
   initSoftwareFilter();
   loadStudyDurations();
-  loadNotificationSettings();
-  loadDiagnostics();
   syncGet({ language: 'en' }, (res) => {
     const lang = (res && res.language === 'fr') ? 'fr' : 'en';
     setLanguage(lang, false);
@@ -3753,7 +3470,6 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
         const needsAllReload = !!(changes.pronoteItems || changes.reminders);
         const needsCalendarReload = !!(changes[RECURRING_KEY] || changes[PLAN_OVERRIDES_KEY] || changes[STUDY_SESSIONS_KEY]);
         const needsDeletedReload = !!changes.pronoteDeletedItems;
-        const needsDiagnosticsReload = !!changes.captureDiagnostics;
         if (needsAllReload) {
           scheduleStorageRefresh(() => loadAll(), 60);
         } else if (needsCalendarReload) {
@@ -3765,21 +3481,11 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
           localGet({ pronoteDeletedItems: [] }, (res) => {
             renderDeletedItems(res.pronoteDeletedItems || []);
           });
-        } else if (needsDiagnosticsReload) {
-          loadDiagnostics();
         }
       }
       if (area === 'sync' && changes.language) {
         const next = changes.language?.newValue === 'fr' ? 'fr' : 'en';
         if (next !== currentLang) setLanguage(next, false);
-      } else if (area === 'sync' && (
-        changes.dueNotificationsEnabled ||
-        changes.dueNotifyHour ||
-        changes.dueNotifyMinute ||
-        changes.dueNotifyHomework ||
-        changes.dueNotifyReminders
-      )) {
-        loadNotificationSettings();
       }
     });
   } catch (e) { logStorageError('storage-onChanged', e); }
