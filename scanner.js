@@ -9,7 +9,6 @@
   };
   const MAX_STORED_ITEMS = 1200;
 
-  const LOAD_ID = String(performance.timeOrigin || Date.now());
   const navEventName = "pronote-locationchange";
   (function patchHistory() {
     const fire = () => window.dispatchEvent(new Event(navEventName));
@@ -18,10 +17,6 @@
     history.replaceState = function () { const x = r.apply(this, arguments); fire(); return x; };
     window.addEventListener("popstate", fire);
   })();
-
-  function urlKey(u) { return "pronoteCaptured::" + u; }
-  function alreadyCaptured(u) { return sessionStorage.getItem(urlKey(u)) === LOAD_ID; }
-  function markCaptured(u) { sessionStorage.setItem(urlKey(u), LOAD_ID); }
 
   let allowAutoCapture = true; // Auto-capture on load by default
   let skipDownloads = false;
@@ -58,8 +53,6 @@
         try { window.__PRONOTE_FORCE_SCAN = true; } catch { }
         allowAutoCapture = true;
         setTimeout(() => { allowAutoCapture = false; }, 60000);
-        // Clear the per-load “already captured” flag so a re-run on the same page works
-        try { sessionStorage.removeItem(urlKey(location.href)); } catch { }
         toast('Capturing…');
         try { console.info('[PRONOTE planner] Force capture received; arming...'); } catch { }
         setTimeout(() => {
@@ -111,9 +104,6 @@
     } catch { }
     // If we got here via explicit trigger, run even if the guard is false
     if (!allowAutoCapture) { try { console.info('[PRONOTE planner] forcing capture even though allowAutoCapture=false'); } catch { } }
-    const currentUrl = location.href;
-    // Always allow a new capture when explicitly triggered
-    try { sessionStorage.removeItem(urlKey(currentUrl)); } catch { }
 
     let resolved = false;
     let stableTimer = null;
@@ -525,8 +515,14 @@
         const dm = t.match(/\b(\d{1,2})\s+([a-z]+)\b/);
         const dmy = t.match(/\b(\d{1,2})[\\/-](\d{1,2})(?:[\\/-](\d{2,4}))?\b/);
         function toISO(y, m, d) { const yy = y < 100 ? 2000 + y : y; return `${yy}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }
-        if (dmy) { const d = parseInt(dmy[1], 10), m = parseInt(dmy[2], 10), y = dmy[3] ? parseInt(dmy[3], 10) : (new Date()).getFullYear(); return toISO(y < 100 ? 2000 + y : y, m, d); }
-        if (dm) { const d = parseInt(dm[1], 10); let key = dm[2].replace(/[^a-z]/g, ""); const m = months[key] || monthsAbbrev[key]; if (m) return toISO((new Date()).getFullYear(), m, d); }
+        // When no year is written, pick the year that keeps the due date in the future
+        // (PRONOTE homework is always upcoming); otherwise a "5 janvier" captured in
+        // December would resolve to the current — already past — year.
+        const now = new Date();
+        const nowISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const resolveYear = (m, d) => { const cur = now.getFullYear(); return toISO(cur, m, d) < nowISO ? cur + 1 : cur; };
+        if (dmy) { const d = parseInt(dmy[1], 10), m = parseInt(dmy[2], 10); if (dmy[3]) { const y = parseInt(dmy[3], 10); return toISO(y < 100 ? 2000 + y : y, m, d); } return toISO(resolveYear(m, d), m, d); }
+        if (dm) { const d = parseInt(dm[1], 10); let key = dm[2].replace(/[^a-z]/g, ""); const m = months[key] || monthsAbbrev[key]; if (m) return toISO(resolveYear(m, d), m, d); }
         if (t === "aujourdhui") { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         if (t === "demain") { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         if (t === "apres demain" || t === "apres-demain") { const d = new Date(); d.setDate(d.getDate() + 2); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
@@ -673,7 +669,7 @@
         const manual = parseInt(it.manualMinutes, 10);
         const minutes = Number.isFinite(manual) && manual > 0 ? manual : getMinutes(it);
         const sessionCount = clampSessionCount(it);
-        const prefix = kind === 'test' ? 'Study' : 'Study';
+        const prefix = 'Study';
 
         if (kind === "test") {
           const count = sessionCount || 4;
@@ -683,6 +679,7 @@
             sessions.push({
               date: dates[idx],
               minutes,
+              kind: 'test',
               title: `${prefix} ${it.subject || ""} (${idx + 1}/${dates.length})`.trim(),
               notes: `Prep ${it.subject || ""} for ${dueISO}. ${(it.notes || '').slice(0, 160)}`
             });
@@ -698,6 +695,7 @@
             sessions.push({
               date: dates[idx],
               minutes,
+              kind: 'homework',
               title: `${prefix} ${it.subject || ""} (${idx + 1}/${dates.length})`.trim(),
               notes: `Finish ${it.subject || ""} for ${dueISO}. ${(it.notes || '').slice(0, 160)}`
             });
@@ -738,14 +736,14 @@
         }
 
         const fmtLocal = (dt) => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-        const priority = (title) => (/^r[ée]vision/i.test(title || '')) ? 0 : 1; // tests first
+        const priority = (s) => (s && s.kind === 'test') ? 0 : 1; // tests first
         const parseHM = (t) => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
         const minutesToDate = (y, m, d, total) => new Date(y, m - 1, d, Math.floor(total / 60), total % 60, 0);
 
         let uidCounter = 0;
         const sortedDates = Array.from(byDate.keys()).sort();
         for (const date of sortedDates) {
-          const sessions = byDate.get(date).slice().sort((a, b) => priority(a.title) - priority(b.title) || (a.title || '').localeCompare(b.title || ''));
+          const sessions = byDate.get(date).slice().sort((a, b) => priority(a) - priority(b) || (a.title || '').localeCompare(b.title || ''));
           const [y, m, d] = date.split('-').map(x => parseInt(x, 10));
           const weekday = (new Date(y, m - 1, d)).getDay();
           const wins = (studyWindows && studyWindows[String(weekday)] || []).map(w => ({ start: parseHM(w.start), end: parseHM(w.end) })).sort((a, b) => a.start - b.start);
@@ -1347,7 +1345,6 @@
               }, () => { });
               skipDownloads = false;
             } catch { }
-            markCaptured(currentUrl);
             allowAutoCapture = false;
             window.__PRONOTE_REPLACE_MODE = false;
           });
@@ -1368,7 +1365,6 @@
             }, () => { });
             skipDownloads = false;
           } catch { }
-          markCaptured(currentUrl);
           allowAutoCapture = false;
           window.__PRONOTE_REPLACE_MODE = false;
         }

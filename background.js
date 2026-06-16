@@ -118,9 +118,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if ((msg.type === 'GET_LOCAL_SCHEDULE' ||
       msg.type === 'GCAL_LOGIN' ||
       msg.type === 'GCAL_SYNC_NOW' ||
-      msg.type === 'PRONOTE_OPEN_AGICAL_LINKS' ||
-      msg.type === 'PRONOTE_IMPORT_ICS_NOW' ||
-      msg.type === 'PRONOTE_MANUAL_CAPTURE') && !fromExtensionPage) {
+      msg.type === 'PRONOTE_IMPORT_ICS_NOW') && !fromExtensionPage) {
     sendResponse({ ok: false, error: 'forbidden' });
     return true;
   }
@@ -201,6 +199,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           await localRemove([GCAL_CAL_ID_KEY]);
         }
         if (result.upserted === 0 && (needsReconsent(result.errors) || calendarMissing)) {
+          // The token was rejected (401/403). chrome.identity caches it and would hand
+          // back the SAME bad token on the next getAuthToken call, so evict it first to
+          // force a genuinely fresh interactive grant.
+          if (needsReconsent(result.errors) && token) {
+            await new Promise(r => chrome.identity.removeCachedAuthToken({ token }, () => { void chrome.runtime.lastError; r(); }));
+          }
           const fresh = await getTokenInteractive();
           if (fresh) {
             const freshCalendarId = await ensureManagedCalendar(fresh);
@@ -225,23 +229,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true;
   }
-  if (msg.type === 'PRONOTE_OPEN_AGICAL_LINKS') {
-    (async () => {
-      try {
-        const storedObj = await new Promise(r => chrome.storage.local.get({ pronoteItems: [] }, r));
-        const items = storedObj.pronoteItems || [];
-        if (!items.length) { sendResponse({ ok: false }); return; }
-        const cfg = await new Promise(r => chrome.storage.sync.get({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' }, r));
-        const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
-        const plan = makeStudyPlan(items, durations, cfg.language);
-        if (!plan.length) { sendResponse({ ok: false }); return; }
-        const html = buildAgicalLinksPage(plan, cfg.language || 'en');
-        const url = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
-        chrome.tabs.create({ url }, () => sendResponse({ ok: true }));
-      } catch (e) { sendResponse({ ok: false, error: String(e) }); }
-    })();
-    return true;
-  }
   if (msg.type === 'PRONOTE_IMPORT_ICS_NOW') {
     (async () => {
       try {
@@ -251,14 +238,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: false, error: String(e) });
       }
     })();
-    return true;
-  }
-  if (msg.type === 'PRONOTE_MANUAL_CAPTURE') {
-    try {
-      const id = msg.tabId;
-      if (typeof id === 'number') manualCaptureTabs.add(id);
-    } catch (e) { warn('manual-capture', e); }
-    sendResponse({ ok: true });
     return true;
   }
   if (msg.type === 'PRONOTE_FETCH_ICS') {
@@ -433,8 +412,8 @@ function parseICSHomework(text) {
       if (raw === 'END:VEVENT') { push(); continue; }
       if (!ev) continue;
       if (/^[ \t]/.test(raw)) { const k = ev._lastKey; if (k) ev[k] = (ev[k] || '') + raw.replace(/^\s+/, ''); continue; }
-      const m = raw.match(/^([A-Z;-]+):(.+)$/); if (!m) continue;
-      const key = m[1].split(';')[0]; ev[key] = m[2]; ev._lastKey = key;
+      const m = raw.match(/^([A-Z][A-Z0-9-]*)(?:;[^:]*)?:(.*)$/i); if (!m) continue;
+      const key = m[1].toUpperCase(); ev[key] = m[2]; ev._lastKey = key;
     }
     return items;
   } catch { return []; }
@@ -946,40 +925,6 @@ async function runAutoGcalSync(reason) {
       triggerAutoGcalSync('queued-rerun');
     }
   }
-}
-
-function buildAgicalLinksPage(plan, language = 'en') {
-  const escHtml = s => String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-  const pad = n => String(n).padStart(2, '0');
-  const tzOffset = (d) => { const mins = -d.getTimezoneOffset(); const sign = mins >= 0 ? '%2B' : '-'; const a = Math.abs(mins); const hh = pad(Math.floor(a / 60)); const mm = pad(a % 60); return sign + hh + ':' + mm; };
-  function dtstartFor(date, minutes) {
-    // place at 18:00 local if no time; our plan rows are date-only with minutes length; use 18:00
-    const [y, m, d] = date.split('-').map(x => parseInt(x, 10));
-    const start = new Date(y, m - 1, d, 18, 0, 0);
-    const off = tzOffset(start);
-    return `${y}-${pad(m)}-${pad(d)}T${pad(start.getHours())}:${pad(start.getMinutes())}:00${off}`;
-  }
-  function durationStr(mins) { return (mins >= 60) ? `${Math.floor(mins / 60)}H${mins % 60 ? pad(mins % 60) + 'M' : ''}`.replace(/M$/, '') : `${mins}M`; }
-  function agicalUrl(row) {
-    const base = 'https://ics.agical.io/';
-    const params = new URLSearchParams();
-    params.set('subject', row.title || (language === 'fr' ? 'Séance de révision' : 'Study session'));
-    params.set('description', row.notes || '');
-    params.set('dtstart', dtstartFor(row.date, row.minutes));
-    params.set('duration', durationStr(parseInt(row.minutes, 10) || 30));
-    // optional reminder 30 minutes before
-    params.set('reminder', '30');
-    return base + '?' + params.toString();
-  }
-  const rows = (plan || []).map(r => ({ ...r, link: agicalUrl(r) }));
-  const style = `body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:20px}h1{font-size:18px;margin:0 0 10px}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}a.button{display:inline-block;background:#1e89ff;color:#fff;text-decoration:none;padding:6px 10px;border-radius:8px;font-weight:700}`;
-  const rowsHtml = rows.map(r => `<tr><td>${escHtml(r.date)}</td><td>${escHtml(r.title)}</td><td>${escHtml(r.minutes)}</td><td><a class="button" href="${escHtml(r.link)}" target="_blank" rel="noopener">Add</a></td></tr>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Add to Calendar</title><style>${style}</style></head><body><h1>Add to Calendar (Agical)</h1><table><thead><tr><th>Date</th><th>Title</th><th>Minutes</th><th>Link</th></tr></thead><tbody>${rowsHtml}</tbody></table><p>Each link opens a one‑off ICS for that session via agical.io.</p></body></html>`;
 }
 
 const manualCaptureTabs = new Set();

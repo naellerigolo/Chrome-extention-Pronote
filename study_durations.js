@@ -306,7 +306,7 @@
       const row = document.createElement('div');
       row.className = 'row';
       const addBtn = document.createElement('button');
-      addBtn.textContent = t('sdSaveWindows').replace(/windows/i, 'window');
+      addBtn.textContent = t('sdAddWindow');
       addBtn.className = 'add-window';
 
       const key = String(day);
@@ -649,24 +649,24 @@
       currentTimeFormat = res && res.timeFormat === '24h' ? '24h' : '12h';
       if ($sdTimeFormat) $sdTimeFormat.value = currentTimeFormat;
       applyTranslations();
-      renderBlocks();
+      buildGrid();
       buildClassic();
       renderBlocks();
-      buildGrid();
     });
     $sdLanguage.addEventListener('change', () => {
       currentLang = $sdLanguage.value === 'fr' ? 'fr' : 'en';
       chrome.storage.sync.set({ language: currentLang });
       applyTranslations();
-      renderBlocks();
-      buildClassic();
       buildGrid();
+      buildClassic();
+      renderBlocks();
     });
     if ($sdTimeFormat) {
       $sdTimeFormat.addEventListener('change', () => {
         currentTimeFormat = $sdTimeFormat.value === '24h' ? '24h' : '12h';
         chrome.storage.sync.set({ timeFormat: currentTimeFormat });
         buildGrid();
+        renderBlocks();
       });
     }
   }

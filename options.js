@@ -2898,8 +2898,13 @@ function buildWeekEvents(weekStart, items, recurring) {
   const start = new Date(weekStart);
   const end = new Date(weekStart); end.setDate(end.getDate() + 7);
   const inRange = (iso) => {
-    const d = new Date(iso);
-    return d >= start && d < end;
+    // Parse the date-only dueDate as LOCAL midnight to match start/end (a bare
+    // "YYYY-MM-DD" passed to new Date() is parsed as UTC, shifting it a day for
+    // users behind UTC and dropping boundary items from the week).
+    const [y, m, d] = String(iso).split('-').map(v => parseInt(v, 10));
+    if (!Number.isFinite(y)) return false;
+    const dt = new Date(y, m - 1, d, 0, 0, 0);
+    return dt >= start && dt < end;
   };
   const defaultMinutes = (it) => {
     const m = parseInt(it?.manualMinutes, 10);
@@ -2923,7 +2928,7 @@ function buildWeekEvents(weekStart, items, recurring) {
       const dur = Math.max(5, parseInt(r.duration, 10) || 60);
       const st = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hh, mm, 0);
       const en = new Date(st.getTime() + dur * 60000);
-      addToDay(st.toISOString().slice(0, 10), {
+      addToDay(isoDateFromDate(st), {
         start: st,
         end: en,
         title: r.title || 'Recurring',
