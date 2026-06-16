@@ -14,6 +14,13 @@ const EXT_STATE_VERSION = 2;
 const MANAGED_CAL_SUMMARY = 'PRONOTE Planner';
 const MANAGED_CAL_DESC_MARKER = '[managed-by-pronote-planner]';
 const MAX_PRONOTE_ITEMS = 1200;
+const DEFAULT_DUE_NOTIFICATION_PREFS = {
+  dueNotificationsEnabled: true,
+  dueNotifyHour: 17,
+  dueNotifyMinute: 0,
+  dueNotifyHomework: true,
+  dueNotifyReminders: true
+};
 
 let autoSyncTimer = null;
 let autoSyncInFlight = false;
@@ -93,6 +100,17 @@ async function runStartupMigration() {
   }
 }
 
+async function updateCaptureDiagnostics(patch) {
+  const previous = await localGet({ captureDiagnostics: {} });
+  await localSet({
+    captureDiagnostics: {
+      ...(previous.captureDiagnostics || {}),
+      ...patch,
+      updatedAt: new Date().toISOString()
+    }
+  });
+}
+
 function isTrustedSender(sender) {
   return !!(sender && sender.id === EXTENSION_ID);
 }
@@ -132,23 +150,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'GET_LOCAL_SCHEDULE') {
     (async () => {
       try {
-        const storedObj = await new Promise(r => chrome.storage.local.get({ pronoteItems: [], recurringEvents: [], planOverrides: {} }, r));
-        const cfg = await new Promise(r => chrome.storage.sync.get({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' }, r));
-        const items = storedObj.pronoteItems || [];
-        const recurring = storedObj.recurringEvents || [];
-        const overrides = storedObj.planOverrides || {};
-        const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
-        const plan = makeStudyPlan(items, durations, cfg.language || 'en');
-        const recSlots = buildRecurringOccurrences(recurring, 365, cfg.language || 'en');
-        const ovResult = applyPlanOverrides(plan, overrides, cfg.studyWindows, cfg.language || 'en');
-        const scheduledPlan = ovResult.events || [];
-        const scheduled = scheduledPlan.concat(recSlots);
-        if (ovResult.staleOverrideIds && ovResult.staleOverrideIds.length) {
-          const next = { ...overrides };
-          for (const id of ovResult.staleOverrideIds) delete next[id];
-          await localSet({ planOverrides: next });
-        }
-        sendResponse({ ok: true, events: scheduled });
+        const result = await buildScheduledPlanFromStorage();
+        sendResponse({ ok: true, events: result.scheduled });
       } catch (e) { sendResponse({ ok: false, error: String(e) }); }
     })();
     return true;
@@ -231,34 +234,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'PRONOTE_EXPORT_ICS_NOW') {
     (async () => {
       try {
-        const storedObj = await localGet({ pronoteItems: [], recurringEvents: [], planOverrides: {} });
-        const items = Array.isArray(storedObj.pronoteItems) ? storedObj.pronoteItems : [];
-        const recurring = Array.isArray(storedObj.recurringEvents) ? storedObj.recurringEvents : [];
-        const overrides = storedObj.planOverrides || {};
-        if (!items.length && !recurring.length) {
+        const result = await buildScheduledPlanFromStorage();
+        if (!result.items.length && !result.recurring.length) {
           sendResponse({ ok: false, reason: 'no_items' });
           return;
         }
-        const cfg = await syncGet({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' });
-        const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
-        const plan = makeStudyPlan(items, durations, cfg.language || 'en');
-        const recSlots = buildRecurringOccurrences(recurring, 365, cfg.language || 'en');
-        if ((!plan || plan.length === 0) && !recSlots.length) {
+        if ((!result.plan || result.plan.length === 0) && !result.recSlots.length) {
           sendResponse({ ok: false, reason: 'no_plan' });
           return;
         }
-        const ovResult = applyPlanOverrides(plan, overrides, cfg.studyWindows, cfg.language || 'en');
-        const scheduled = (ovResult.events || []).concat(recSlots);
-        if (ovResult.staleOverrideIds && ovResult.staleOverrideIds.length) {
-          const next = { ...overrides };
-          for (const id of ovResult.staleOverrideIds) delete next[id];
-          await localSet({ planOverrides: next });
-        }
-        if (!scheduled.length) {
+        if (!result.scheduled.length) {
           sendResponse({ ok: false, reason: 'no_plan' });
           return;
         }
-        const text = toScheduledICS(scheduled);
+        const text = toScheduledICS(result.scheduled);
         const filename = `pronote_study_plan_${ymdLocal(new Date())}.ics`;
         const downloadId = await new Promise((resolve) => {
           try {
@@ -284,7 +273,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: false, error: 'download_failed' });
           return;
         }
-        sendResponse({ ok: true, count: scheduled.length, downloadId });
+        sendResponse({ ok: true, count: result.scheduled.length, downloadId });
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }
@@ -353,6 +342,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (tabId != null && manualCaptureTabs.has(tabId)) {
         manualCaptureTabs.delete(tabId);
       }
+      updateCaptureDiagnostics({
+        lastScanAt: new Date().toISOString(),
+        status: msg.changed ? 'changed' : 'unchanged',
+        source: sender && sender.url || sender && sender.tab && sender.tab.url || ''
+      }).catch(e => warn('capture-diagnostics-status', e));
     } catch (e) { warn('capture-status', e); }
     sendResponse({ ok: true });
     return true;
@@ -365,6 +359,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       manualCaptureTabs.delete(tabId);
     }
   } catch (e) { warn('snapshot-cleanup', e); }
+  try {
+    let parsed = null;
+    try { parsed = JSON.parse(msg.homeworkJson || '{}'); } catch { parsed = null; }
+    const items = parsed && Array.isArray(parsed.items) ? parsed.items : [];
+    updateCaptureDiagnostics({
+      lastScanAt: new Date().toISOString(),
+      status: 'captured',
+      source: parsed && parsed.source || sender && sender.url || sender && sender.tab && sender.tab.url || '',
+      itemCount: items.length,
+      skippedDownloads: !!msg.skipDownloads
+    }).catch(e => warn('capture-diagnostics-snapshot', e));
+  } catch (e) { warn('snapshot-diagnostics', e); }
   triggerAutoGcalSync('snapshot-no-download');
   sendResponse({ ok: true, skippedDownloads: true });
   return true;
@@ -449,11 +455,14 @@ async function runDueNotifications() {
   const stored = await localGet({ pronoteItems: [], reminders: [] });
   const items = Array.isArray(stored.pronoteItems) ? stored.pronoteItems : [];
   const reminders = Array.isArray(stored.reminders) ? stored.reminders : [];
-  const cfg = await syncGet({ language: 'en' });
+  const cfg = await syncGet({ language: 'en', ...DEFAULT_DUE_NOTIFICATION_PREFS });
   const lang = cfg.language === 'fr' ? 'fr' : 'en';
+  if (!cfg.dueNotificationsEnabled) return;
+  const includeHomework = cfg.dueNotifyHomework !== false;
+  const includeReminders = cfg.dueNotifyReminders !== false;
 
-  const dueItems = items.filter(it => it && it.dueDate === tomorrowISO);
-  const dueReminders = reminders.filter(r => resolveReminderISO(r) === tomorrowISO);
+  const dueItems = includeHomework ? items.filter(it => it && it.dueDate === tomorrowISO) : [];
+  const dueReminders = includeReminders ? reminders.filter(r => resolveReminderISO(r) === tomorrowISO) : [];
   const total = dueItems.length + dueReminders.length;
   if (!total) { await localSet({ lastDueNotifyDate: todayISO }); return; }
 
@@ -490,11 +499,12 @@ async function runDueNotifications() {
 (function setupDueNotifyAlarm() {
   try {
     const NAME = 'pronote-due-notify';
-    const NOTIFY_HOUR = 17; // 5pm local: time to prep what's due tomorrow
 
-    function nextFireTime() {
+    function nextFireTime(hour, minute) {
+      const hh = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
+      const mm = Math.max(0, Math.min(59, parseInt(minute, 10) || 0));
       const now = new Date();
-      const fire = new Date(now.getFullYear(), now.getMonth(), now.getDate(), NOTIFY_HOUR, 0, 0, 0);
+      const fire = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
       if (fire.getTime() <= now.getTime()) fire.setDate(fire.getDate() + 1);
       return fire.getTime();
     }
@@ -502,16 +512,23 @@ async function runDueNotifications() {
     function ensureAlarm() {
       return new Promise(resolve => {
         try {
-          chrome.storage.sync.get({ dueNotificationsEnabled: true }, (cfg) => {
+          chrome.storage.sync.get(DEFAULT_DUE_NOTIFICATION_PREFS, (cfg) => {
             chrome.alarms.get(NAME, (alarm) => {
               try {
-                if (!cfg || cfg.dueNotificationsEnabled) {
-                  if (!alarm) chrome.alarms.create(NAME, { when: nextFireTime(), periodInMinutes: 24 * 60 });
-                } else if (alarm) {
-                  chrome.alarms.clear(NAME);
-                }
-              } catch (e) { warn('due-notify-ensure', e); }
-              resolve();
+                const createNext = () => {
+                  if (!(cfg && cfg.dueNotificationsEnabled)) {
+                    resolve();
+                    return;
+                  }
+                  chrome.alarms.create(NAME, {
+                    when: nextFireTime(cfg.dueNotifyHour, cfg.dueNotifyMinute),
+                    periodInMinutes: 24 * 60
+                  });
+                  resolve();
+                };
+                if (alarm) chrome.alarms.clear(NAME, createNext);
+                else createNext();
+              } catch (e) { warn('due-notify-ensure', e); resolve(); }
             });
           });
         } catch (e) { warn('due-notify-ensure', e); resolve(); }
@@ -521,7 +538,13 @@ async function runDueNotifications() {
     chrome.runtime.onInstalled.addListener(ensureAlarm);
     chrome.runtime.onStartup.addListener(ensureAlarm);
     chrome.storage.onChanged.addListener((chg, area) => {
-      if (area === 'sync' && chg.dueNotificationsEnabled) ensureAlarm();
+      if (area === 'sync' && (
+        chg.dueNotificationsEnabled ||
+        chg.dueNotifyHour ||
+        chg.dueNotifyMinute ||
+        chg.dueNotifyHomework ||
+        chg.dueNotifyReminders
+      )) ensureAlarm();
     });
 
     chrome.alarms.onAlarm.addListener((a) => {
@@ -650,6 +673,33 @@ function mergeItems(stored, items) {
 function pad(n) { return String(n).padStart(2, '0'); }
 function dateFromISO(iso) { const [y, m, d] = iso.split('-').map(v => parseInt(v, 10)); return new Date(y, m - 1, d); }
 function isoFromDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+async function buildScheduledPlanFromStorage() {
+  const storedObj = await localGet({ pronoteItems: [], recurringEvents: [], planOverrides: {} });
+  const cfg = await syncGet({ studyWindows: null, studyDurations: defaultStudyDurations, language: 'en' });
+  const items = Array.isArray(storedObj.pronoteItems) ? storedObj.pronoteItems : [];
+  const recurring = Array.isArray(storedObj.recurringEvents) ? storedObj.recurringEvents : [];
+  const overrides = storedObj.planOverrides || {};
+  const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
+  const plan = makeStudyPlan(items, durations, cfg.language || 'en');
+  const recSlots = buildRecurringOccurrences(recurring, 365, cfg.language || 'en');
+  const ovResult = applyPlanOverrides(plan, overrides, cfg.studyWindows, cfg.language || 'en');
+  if (ovResult.staleOverrideIds && ovResult.staleOverrideIds.length) {
+    const next = { ...overrides };
+    for (const id of ovResult.staleOverrideIds) delete next[id];
+    await localSet({ planOverrides: next });
+  }
+  return {
+    cfg,
+    items,
+    recurring,
+    plan,
+    recSlots,
+    scheduledPlan: ovResult.events || [],
+    scheduled: (ovResult.events || []).concat(recSlots),
+    staleOverrideIds: ovResult.staleOverrideIds || []
+  };
+}
 
 function makeStudyPlan(items, studyDurations, language = 'en') {
   const isFr = String(language || '').toLowerCase() === 'fr';

@@ -15,9 +15,12 @@ function loadBackgroundExports() {
   const sourcePath = path.join(__dirname, '..', 'background.js');
   const source = fs.readFileSync(sourcePath, 'utf8') + `
 globalThis.__testExports = {
+  applyPlanOverrides,
+  buildRecurringOccurrences,
   makeStudyPlan,
   parseICSHomework,
   resolveReminderISO,
+  schedulePlan,
   toICS,
   toScheduledICS
 };
@@ -186,4 +189,47 @@ test('resolveReminderISO keeps no-year reminders on an upcoming date', () => {
 
   assert.ok(resolveReminderISO({ dateText: text }) >= todayISO);
   assert.equal(resolveReminderISO({ dateText: '01/01', dueYear: 2031 }), '2031-01-01');
+});
+
+test('buildRecurringOccurrences respects skipWeeks before creating events', () => {
+  const { buildRecurringOccurrences } = loadBackgroundExports();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayDay = today.getDay();
+  const occurrences = buildRecurringOccurrences([
+    { title: 'Gym', time: '18:30', days: [todayDay], duration: 45, skipWeeks: 1 }
+  ], 16, 'en');
+
+  assert.ok(occurrences.length >= 1);
+  const firstDate = new Date(`${occurrences[0].date}T00:00:00`);
+  assert.ok(firstDate.getTime() >= today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  assert.equal(occurrences[0].minutes, 45);
+  assert.match(occurrences[0].pronoteKey, /^rec-/);
+});
+
+test('applyPlanOverrides separates stale overrides and keeps manual sessions explicit', () => {
+  const { applyPlanOverrides } = loadBackgroundExports();
+  const date = addDaysISO(4);
+  const plan = [
+    {
+      id: `${date}|Math|hw|0|0`,
+      date,
+      title: 'Homework Math',
+      notes: '',
+      minutes: 30
+    }
+  ];
+
+  const result = applyPlanOverrides(plan, {
+    [plan[0].id]: { date, time: '20:15', minutes: 35, title: 'Moved Math' },
+    stale: { date, time: '19:00', minutes: 20, title: 'Old item' }
+  }, {
+    [String(new Date(`${date}T00:00:00`).getDay())]: [{ start: '18:00', end: '21:00' }]
+  }, 'en');
+
+  assert.equal(result.staleOverrideIds.join(','), 'stale');
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0].title, 'Moved Math');
+  assert.equal(result.events[0].minutes, 35);
+  assert.match(String(result.events[0].startDateTime), /T20:15:00/);
 });

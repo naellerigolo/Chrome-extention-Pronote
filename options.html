@@ -267,6 +267,109 @@
         color: var(--text-soft);
       }
 
+      .control-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin: 12px 0;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        border-radius: var(--radius-md);
+        background: rgba(15, 23, 42, 0.72);
+      }
+
+      .control-panel label,
+      .settings-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        color: var(--text-soft);
+        font-size: 12px;
+      }
+
+      .control-panel input,
+      .control-panel select,
+      .settings-field input,
+      .settings-field select {
+        width: 100%;
+        min-height: 36px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 253, 0.35);
+        background: rgba(2, 6, 23, 0.82);
+        color: var(--text);
+        padding: 7px 9px;
+        font-size: 13px;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+
+      .settings-card {
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(148, 163, 253, 0.18);
+        background: rgba(15, 23, 42, 0.82);
+        box-shadow: var(--shadow-card);
+        padding: 14px;
+      }
+
+      .settings-card h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+      }
+
+      .settings-toggle {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 8px 0;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .settings-toggle input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+      }
+
+      .diagnostics-list {
+        display: grid;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .diagnostics-row {
+        display: grid;
+        grid-template-columns: 100px minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .diagnostics-value {
+        color: var(--text);
+        overflow-wrap: anywhere;
+      }
+
+      .calendar-warning {
+        display: none;
+        margin: 8px 0 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(248, 113, 113, 0.4);
+        background: rgba(127, 29, 29, 0.22);
+        color: #fecaca;
+        font-size: 12px;
+      }
+
+      .calendar-warning.active {
+        display: block;
+      }
+
       /* Homework overview */
 
       .overview-shell {
@@ -1107,6 +1210,16 @@
       }
       .cal-slot.hw { background: linear-gradient(135deg, rgba(37, 99, 235, 0.72), rgba(59, 130, 246, 0.6)); }
       .cal-slot.rec { background: linear-gradient(135deg, rgba(34, 197, 94, 0.7), rgba(16, 185, 129, 0.7)); }
+      .cal-slot.warn {
+        outline: 2px solid rgba(248, 113, 113, 0.95);
+        box-shadow: 0 8px 20px rgba(127, 29, 29, 0.42);
+      }
+      .cal-slot-warning {
+        margin-top: 3px;
+        font-size: 9px;
+        color: #fecaca;
+        font-weight: 700;
+      }
       .cal-slot-title { font-weight: 700; font-size: 12px; }
       .cal-slot-meta { font-size: 10px; opacity: 0.9; }
       .cal-legend {
@@ -1237,6 +1350,7 @@
       <button id="tab-calendar" class="tab-btn" type="button" aria-controls="section-calendar" data-i18n="tabCalendar">Calendar</button>
       <button id="tab-software" class="tab-btn" type="button" aria-controls="section-software" data-i18n="tabSoftware">Software</button>
       <button id="tab-techniques" class="tab-btn" type="button" aria-controls="section-techniques" data-i18n="tabTechniques">Techniques</button>
+      <button id="tab-settings" class="tab-btn" type="button" aria-controls="section-settings" data-i18n="tabSettings">Settings</button>
     </div>
 
     <div id="section-homework">
@@ -1253,6 +1367,35 @@
         <div class="button-row">
           <button id="delete-all-items" class="btn btn-ghost" type="button" data-i18n="btnDeleteAll">Delete all homework & tests</button>
           <button id="view-deleted-items" class="btn btn-ghost" type="button" data-i18n="btnViewDeleted">View deleted items</button>
+        </div>
+        <div class="control-panel" id="homework-filters">
+          <label>
+            <span data-i18n="filterSearch">Search</span>
+            <input id="homework-filter-query" type="search" data-i18n-placeholder="filterSearchPlaceholder" placeholder="Subject or notes" />
+          </label>
+          <label>
+            <span data-i18n="filterType">Type</span>
+            <select id="homework-filter-type">
+              <option value="all" data-i18n="filterAll">All</option>
+              <option value="homework" data-i18n="filterHomework">Homework</option>
+              <option value="test" data-i18n="filterTest">Tests</option>
+              <option value="reminder" data-i18n="filterReminder">Reminders</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="filterDifficulty">Difficulty</span>
+            <select id="homework-filter-difficulty">
+              <option value="all" data-i18n="filterAll">All</option>
+              <option value="easy" data-i18n="diffEasy">Easy</option>
+              <option value="medium" data-i18n="diffMedium">Medium</option>
+              <option value="hard" data-i18n="diffHard">Hard</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="filterDue">Due date</span>
+            <input id="homework-filter-date" type="date" />
+          </label>
+          <button id="homework-filter-reset" class="btn btn-ghost" type="button" data-i18n="filterReset">Reset filters</button>
         </div>
         <div id="overview" class="overview-shell">
           <div class="overview-grid"></div>
@@ -1284,9 +1427,11 @@
         </div>
         <div class="button-row" style="margin:10px 0;">
           <button id="cal-refresh" class="btn btn-ghost" type="button" data-i18n="calUpdate">Update calendar</button>
+          <button id="cal-autofit" class="btn btn-ghost" type="button" data-i18n="calAutoFit">Auto-fit week</button>
           <button id="cal-export-ics" class="btn btn-ghost" type="button" data-i18n="calExport">Download .ics</button>
           <button id="cal-clear" class="btn btn-ghost" type="button" data-i18n="calClear">Clear calendar</button>
         </div>
+        <div id="cal-warning-summary" class="calendar-warning"></div>
         <div class="cal-shell">
           <div id="cal-grid" class="cal-grid"></div>
         </div>
@@ -1325,6 +1470,71 @@
               <div class="technique-details" style="display:flex;"></div>
             </div>
             <div id="technique-video-panel" class="technique-video-panel hidden"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-settings" class="hidden">
+      <div class="section">
+        <div class="pill-title">
+          <div class="pill-dot"></div>
+          <span data-i18n="settingsPill">Settings</span>
+        </div>
+        <h1 data-i18n="settingsTitle">Settings</h1>
+        <p class="hint" data-i18n="settingsHint">Manage notifications, backup, and capture diagnostics.</p>
+        <div class="settings-grid">
+          <div class="settings-card">
+            <h2 data-i18n="notifyTitle">Notifications</h2>
+            <label class="settings-toggle">
+              <span data-i18n="notifyEnabled">Due-tomorrow notifications</span>
+              <input id="notify-enabled" type="checkbox" />
+            </label>
+            <label class="settings-field">
+              <span data-i18n="notifyTime">Notify at</span>
+              <input id="notify-time" type="time" />
+            </label>
+            <label class="settings-toggle">
+              <span data-i18n="notifyHomework">Homework and tests</span>
+              <input id="notify-homework" type="checkbox" />
+            </label>
+            <label class="settings-toggle">
+              <span data-i18n="notifyReminders">Reminders</span>
+              <input id="notify-reminders" type="checkbox" />
+            </label>
+            <button id="notify-save" class="btn btn-ghost" type="button" data-i18n="notifySave">Save notifications</button>
+            <div id="notify-status" class="status-inline"></div>
+          </div>
+          <div class="settings-card">
+            <h2 data-i18n="backupTitle">Backup</h2>
+            <p class="hint" data-i18n="backupHint">Export or restore extension data as a JSON backup.</p>
+            <div class="button-row">
+              <button id="backup-export" class="btn btn-ghost" type="button" data-i18n="backupExport">Export backup</button>
+              <button id="backup-import" class="btn btn-ghost" type="button" data-i18n="backupImport">Import backup</button>
+            </div>
+            <input id="backup-import-file" class="hidden" type="file" accept="application/json,.json" />
+            <div id="backup-status" class="status-inline"></div>
+          </div>
+          <div class="settings-card">
+            <h2 data-i18n="diagnosticsTitle">Capture diagnostics</h2>
+            <div class="diagnostics-list">
+              <div class="diagnostics-row">
+                <span data-i18n="diagLastScan">Last scan</span>
+                <span id="diag-last-scan" class="diagnostics-value">-</span>
+              </div>
+              <div class="diagnostics-row">
+                <span data-i18n="diagStatus">Status</span>
+                <span id="diag-status" class="diagnostics-value">-</span>
+              </div>
+              <div class="diagnostics-row">
+                <span data-i18n="diagSource">Source</span>
+                <span id="diag-source" class="diagnostics-value">-</span>
+              </div>
+              <div class="diagnostics-row">
+                <span data-i18n="diagCount">Items</span>
+                <span id="diag-count" class="diagnostics-value">-</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

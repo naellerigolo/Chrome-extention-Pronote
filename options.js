@@ -40,6 +40,7 @@ const $tabRecurring = document.getElementById('tab-recurring');
 const $tabCalendar = document.getElementById('tab-calendar');
 const $tabSoftware = document.getElementById('tab-software');
 const $tabTechniques = document.getElementById('tab-techniques');
+const $tabSettings = document.getElementById('tab-settings');
 
 
 const $uiLanguage = document.getElementById('ui-language');
@@ -48,6 +49,12 @@ const $sectionRecurring = document.getElementById('section-recurring');
 const $sectionCalendar = document.getElementById('section-calendar');
 const $sectionSoftware = document.getElementById('section-software');
 const $sectionTechniques = document.getElementById('section-techniques');
+const $sectionSettings = document.getElementById('section-settings');
+const $homeworkFilterQuery = document.getElementById('homework-filter-query');
+const $homeworkFilterType = document.getElementById('homework-filter-type');
+const $homeworkFilterDifficulty = document.getElementById('homework-filter-difficulty');
+const $homeworkFilterDate = document.getElementById('homework-filter-date');
+const $homeworkFilterReset = document.getElementById('homework-filter-reset');
 const $softwareGrid = document.getElementById('software-grid');
 const $softwareFilters = document.getElementById('software-filters');
 const $techniquesGrid = document.getElementById('techniques-grid');
@@ -63,6 +70,8 @@ const $calNext = document.getElementById('cal-next');
 const $calRefresh = document.getElementById('cal-refresh');
 const $calClear = document.getElementById('cal-clear');
 const $calExport = document.getElementById('cal-export-ics');
+const $calAutoFit = document.getElementById('cal-autofit');
+const $calWarningSummary = document.getElementById('cal-warning-summary');
 const $calHeader = document.querySelector('.cal-header');
 const $calSentinel = document.getElementById('cal-sentinel');
 const $planModal = document.getElementById('plan-modal');
@@ -73,6 +82,20 @@ const $planModalReset = document.getElementById('plan-modal-reset');
 const $planModalClose = document.getElementById('plan-modal-close');
 const $planModalTitle = document.getElementById('plan-modal-title');
 const $toastHost = document.getElementById('toast-host');
+const $notifyEnabled = document.getElementById('notify-enabled');
+const $notifyTime = document.getElementById('notify-time');
+const $notifyHomework = document.getElementById('notify-homework');
+const $notifyReminders = document.getElementById('notify-reminders');
+const $notifySave = document.getElementById('notify-save');
+const $notifyStatus = document.getElementById('notify-status');
+const $backupExport = document.getElementById('backup-export');
+const $backupImport = document.getElementById('backup-import');
+const $backupImportFile = document.getElementById('backup-import-file');
+const $backupStatus = document.getElementById('backup-status');
+const $diagLastScan = document.getElementById('diag-last-scan');
+const $diagStatus = document.getElementById('diag-status');
+const $diagSource = document.getElementById('diag-source');
+const $diagCount = document.getElementById('diag-count');
 let calFloatScheduled = false;
 let currentPlanId = null;
 let dragPlan = null;
@@ -100,6 +123,43 @@ const defaultStudyWindows = {
   '5': [{ start: '18:00', end: '21:00' }],
   '6': [{ start: '10:00', end: '20:00' }],
   '0': [{ start: '10:00', end: '20:00' }]
+};
+const defaultNotificationPrefs = {
+  dueNotificationsEnabled: true,
+  dueNotifyHour: 17,
+  dueNotifyMinute: 0,
+  dueNotifyHomework: true,
+  dueNotifyReminders: true
+};
+const BACKUP_LOCAL_KEYS = [
+  'pronoteItems',
+  'pronoteDeletedItems',
+  'reminders',
+  RECURRING_KEY,
+  PLAN_OVERRIDES_KEY,
+  'captureDiagnostics',
+  'gcalCalendarId',
+  'extensionStateVersion',
+  ONBOARDING_KEY
+];
+const BACKUP_SYNC_KEYS = [
+  'language',
+  'studyDurations',
+  'studyWindows',
+  'autoGcalEnabled',
+  'icsEnabled',
+  'icsUrl',
+  'dueNotificationsEnabled',
+  'dueNotifyHour',
+  'dueNotifyMinute',
+  'dueNotifyHomework',
+  'dueNotifyReminders'
+];
+const homeworkFilters = {
+  query: '',
+  type: 'all',
+  difficulty: 'all',
+  dueDate: ''
 };
 
 function logStorageError(scope, err) {
@@ -184,10 +244,22 @@ const TRANSLATIONS = {
     tabRecurring: 'Recurring events',
     tabCalendar: 'Calendar',
     tabSoftware: 'Software',
+    tabSettings: 'Settings',
     hwTitle: 'Homework Overview',
     hwHint: 'Snapshot of your stored homework. Upcoming items are grouped by due date so you can quickly adjust type & difficulty.',
     btnDeleteAll: 'Delete all homework & tests',
     btnViewDeleted: 'View deleted items',
+    filterSearch: 'Search',
+    filterSearchPlaceholder: 'Subject or notes',
+    filterType: 'Type',
+    filterAll: 'All',
+    filterHomework: 'Homework',
+    filterTest: 'Tests',
+    filterReminder: 'Reminders',
+    filterDifficulty: 'Difficulty',
+    filterDue: 'Due date',
+    filterReset: 'Reset filters',
+    filterEmpty: 'No items match those filters.',
     labelDifficulty: 'Difficulty',
     diffEasy: 'Easy',
     diffMedium: 'Medium',
@@ -207,6 +279,11 @@ const TRANSLATIONS = {
     calExported: 'ICS file downloaded.',
     calExportEmpty: 'No study sessions to export.',
     calExportFailed: 'Could not export calendar.',
+    calAutoFit: 'Auto-fit week',
+    calAutoFitDone: 'Week returned to automatic scheduling.',
+    calWarningSummary: '{count} scheduling warning(s) in this week.',
+    calConflictOverlap: 'Overlaps a recurring event',
+    calConflictOutside: 'Outside study window',
     softwarePill: 'Software',
     softwareTitle: 'Best free student software',
     softwareHint: 'Web-only tools that are free and useful for high school.',
@@ -390,8 +467,31 @@ const TRANSLATIONS = {
     noEvents: 'No events in this week.',
     studySession: 'Study session',
     manual: 'manual',
+    settingsPill: 'Settings',
     settingsTitle: 'Settings',
-    settingsHint: 'Manage preferences for language and calendar sync.',
+    settingsHint: 'Manage notifications, backup, and capture diagnostics.',
+    notifyTitle: 'Notifications',
+    notifyEnabled: 'Due-tomorrow notifications',
+    notifyTime: 'Notify at',
+    notifyHomework: 'Homework and tests',
+    notifyReminders: 'Reminders',
+    notifySave: 'Save notifications',
+    notifySaved: 'Notification settings saved.',
+    notifyInvalidTime: 'Choose a valid notification time.',
+    backupTitle: 'Backup',
+    backupHint: 'Export or restore extension data as a JSON backup.',
+    backupExport: 'Export backup',
+    backupImport: 'Import backup',
+    backupConfirm: 'Import this backup and replace matching local settings?',
+    backupExported: 'Backup exported.',
+    backupImported: 'Backup imported.',
+    backupInvalid: 'That backup file could not be read.',
+    diagnosticsTitle: 'Capture diagnostics',
+    diagLastScan: 'Last scan',
+    diagStatus: 'Status',
+    diagSource: 'Source',
+    diagCount: 'Items',
+    diagEmpty: 'Never',
     langLabel: 'Language',
     langEn: 'English',
     langFr: 'French'
@@ -405,10 +505,22 @@ const TRANSLATIONS = {
     tabRecurring: 'Évènements récurrents',
     tabCalendar: 'Calendrier',
     tabSoftware: 'Logiciels',
+    tabSettings: 'Paramètres',
     hwTitle: 'Vue des devoirs',
     hwHint: 'Aperçu des devoirs enregistrés, groupés par date pour ajuster rapidement type et difficulté.',
     btnDeleteAll: 'Supprimer tous les devoirs et tests',
     btnViewDeleted: 'Voir les éléments supprimés',
+    filterSearch: 'Rechercher',
+    filterSearchPlaceholder: 'Matière ou notes',
+    filterType: 'Type',
+    filterAll: 'Tout',
+    filterHomework: 'Devoirs',
+    filterTest: 'Tests',
+    filterReminder: 'Rappels',
+    filterDifficulty: 'Difficulté',
+    filterDue: 'Date limite',
+    filterReset: 'Réinitialiser les filtres',
+    filterEmpty: 'Aucun élément ne correspond aux filtres.',
     labelDifficulty: 'Difficulté',
     diffEasy: 'Facile',
     diffMedium: 'Moyen',
@@ -428,6 +540,11 @@ const TRANSLATIONS = {
     calExported: 'Fichier ICS téléchargé.',
     calExportEmpty: 'Aucune séance à exporter.',
     calExportFailed: 'Impossible d’exporter le calendrier.',
+    calAutoFit: 'Réorganiser la semaine',
+    calAutoFitDone: 'La semaine est repassée en planning automatique.',
+    calWarningSummary: '{count} avertissement(s) de planning cette semaine.',
+    calConflictOverlap: 'Chevauche un évènement récurrent',
+    calConflictOutside: 'Hors créneau d’étude',
     softwarePill: 'Logiciels',
     softwareTitle: 'Meilleurs logiciels gratuits',
     softwareHint: 'Outils web gratuits utiles au lycée.',
@@ -609,8 +726,31 @@ const TRANSLATIONS = {
     noEvents: 'Aucun évènement cette semaine.',
     studySession: 'Séance de révision',
     manual: 'manuel',
+    settingsPill: 'Paramètres',
     settingsTitle: 'Paramètres',
-    settingsHint: 'Gérez la langue et la synchronisation calendrier.',
+    settingsHint: 'Gérez les notifications, les sauvegardes et le diagnostic de capture.',
+    notifyTitle: 'Notifications',
+    notifyEnabled: 'Notifications pour demain',
+    notifyTime: 'Notifier à',
+    notifyHomework: 'Devoirs et tests',
+    notifyReminders: 'Rappels',
+    notifySave: 'Enregistrer les notifications',
+    notifySaved: 'Paramètres de notification enregistrés.',
+    notifyInvalidTime: 'Choisissez une heure de notification valide.',
+    backupTitle: 'Sauvegarde',
+    backupHint: 'Exportez ou restaurez les données de l’extension en JSON.',
+    backupExport: 'Exporter la sauvegarde',
+    backupImport: 'Importer une sauvegarde',
+    backupConfirm: 'Importer cette sauvegarde et remplacer les paramètres correspondants ?',
+    backupExported: 'Sauvegarde exportée.',
+    backupImported: 'Sauvegarde importée.',
+    backupInvalid: 'Impossible de lire ce fichier de sauvegarde.',
+    diagnosticsTitle: 'Diagnostic de capture',
+    diagLastScan: 'Dernier scan',
+    diagStatus: 'Statut',
+    diagSource: 'Source',
+    diagCount: 'Éléments',
+    diagEmpty: 'Jamais',
     langLabel: 'Langue',
     langEn: 'Anglais',
     langFr: 'Français'
@@ -966,6 +1106,7 @@ function setLanguage(lang, persist = true) {
   buildSoftwareFilterOptions();
   loadAll();
   loadRecurring();
+  loadDiagnostics();
   renderCalendar();
 }
 
@@ -1206,6 +1347,174 @@ function showToast(message, kind = 'info') {
 function formatTemplate(template, vars) {
   const map = vars || {};
   return String(template || '').replace(/\{(\w+)\}/g, (m, key) => (map[key] == null ? m : String(map[key])));
+}
+
+function setInlineStatus(el, message = '', kind = '') {
+  if (!el) return;
+  el.textContent = message;
+  el.className = kind ? `status-inline ${kind}` : 'status-inline';
+  el.style.color = kind === 'error' ? '#fecaca' : (kind === 'success' ? '#bbf7d0' : '');
+}
+
+function formatPrefTime(hour, minute) {
+  const hh = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
+  const mm = Math.max(0, Math.min(59, parseInt(minute, 10) || 0));
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function parsePrefTime(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return { hour, minute };
+}
+
+function loadNotificationSettings() {
+  if (!$notifyEnabled && !$notifyTime && !$notifyHomework && !$notifyReminders) return;
+  syncGet({ ...defaultNotificationPrefs }, (res) => {
+    if ($notifyEnabled) $notifyEnabled.checked = res.dueNotificationsEnabled !== false;
+    if ($notifyTime) $notifyTime.value = formatPrefTime(res.dueNotifyHour, res.dueNotifyMinute);
+    if ($notifyHomework) $notifyHomework.checked = res.dueNotifyHomework !== false;
+    if ($notifyReminders) $notifyReminders.checked = res.dueNotifyReminders !== false;
+  });
+}
+
+function saveNotificationSettings() {
+  const parsed = parsePrefTime($notifyTime?.value || formatPrefTime(defaultNotificationPrefs.dueNotifyHour, defaultNotificationPrefs.dueNotifyMinute));
+  if (!parsed) {
+    setInlineStatus($notifyStatus, t('notifyInvalidTime'), 'error');
+    return;
+  }
+  syncSet({
+    dueNotificationsEnabled: !!$notifyEnabled?.checked,
+    dueNotifyHour: parsed.hour,
+    dueNotifyMinute: parsed.minute,
+    dueNotifyHomework: $notifyHomework?.checked !== false,
+    dueNotifyReminders: $notifyReminders?.checked !== false
+  }, () => {
+    setInlineStatus($notifyStatus, t('notifySaved'), 'success');
+    showToast(t('notifySaved'), 'success');
+  });
+}
+
+function storageGetKeys(area, keys, cb) {
+  try {
+    const target = chrome?.storage?.[area];
+    if (!target) { cb({}); return; }
+    target.get(keys, (res) => {
+      if (chrome.runtime.lastError) logStorageError(`storageGetKeys-${area}`, chrome.runtime.lastError.message);
+      cb(res || {});
+    });
+  } catch (e) {
+    logStorageError(`storageGetKeys-${area}`, e);
+    cb({});
+  }
+}
+
+function pickBackupPatch(src, allowedKeys) {
+  const out = {};
+  if (!src || typeof src !== 'object' || Array.isArray(src)) return out;
+  const allowed = new Set(allowedKeys || []);
+  for (const [key, value] of Object.entries(src)) {
+    if (!allowed.has(key)) continue;
+    if (/^ai/i.test(key)) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
+function downloadTextFile(filename, mime, text) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportBackupData() {
+  storageGetKeys('local', BACKUP_LOCAL_KEYS, (localData) => {
+    storageGetKeys('sync', BACKUP_SYNC_KEYS, (syncData) => {
+      const exportedAt = new Date().toISOString();
+      const backup = {
+        schema: 'pronote-planner-backup',
+        version: 1,
+        exportedAt,
+        local: localData || {},
+        sync: syncData || {}
+      };
+      const day = exportedAt.slice(0, 10);
+      downloadTextFile(`pronote_planner_backup_${day}.json`, 'application/json', JSON.stringify(backup, null, 2));
+      setInlineStatus($backupStatus, t('backupExported'), 'success');
+      showToast(t('backupExported'), 'success');
+    });
+  });
+}
+
+function importBackupFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result || '{}'));
+      const sourceLocal = parsed && typeof parsed.local === 'object' ? parsed.local : {};
+      const sourceSync = parsed && typeof parsed.sync === 'object' ? parsed.sync : {};
+      const localPatch = pickBackupPatch(sourceLocal, BACKUP_LOCAL_KEYS);
+      const syncPatch = pickBackupPatch(sourceSync, BACKUP_SYNC_KEYS);
+      if (!Object.keys(localPatch).length && !Object.keys(syncPatch).length) throw new Error('empty backup');
+      if (!confirm(t('backupConfirm'))) return;
+      const finish = () => {
+        setInlineStatus($backupStatus, t('backupImported'), 'success');
+        showToast(t('backupImported'), 'success');
+        loadStudyDurations();
+        loadNotificationSettings();
+        loadDiagnostics();
+        loadRecurring();
+        loadAll();
+        triggerGcalSync();
+      };
+      const saveSync = () => {
+        if (!Object.keys(syncPatch).length) { finish(); return; }
+        syncSet(syncPatch, finish);
+      };
+      if (Object.keys(localPatch).length) localSet(localPatch, saveSync);
+      else saveSync();
+    } catch (e) {
+      logStorageError('importBackupFile', e);
+      setInlineStatus($backupStatus, t('backupInvalid'), 'error');
+      showToast(t('backupInvalid'), 'error');
+    } finally {
+      if ($backupImportFile) $backupImportFile.value = '';
+    }
+  };
+  reader.onerror = () => {
+    setInlineStatus($backupStatus, t('backupInvalid'), 'error');
+    if ($backupImportFile) $backupImportFile.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function formatDiagnosticsDate(value) {
+  if (!value) return t('diagEmpty');
+  const d = new Date(value);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-US');
+}
+
+function loadDiagnostics() {
+  if (!$diagLastScan && !$diagStatus && !$diagSource && !$diagCount) return;
+  localGet({ captureDiagnostics: {} }, (res) => {
+    const diag = res.captureDiagnostics || {};
+    if ($diagLastScan) $diagLastScan.textContent = formatDiagnosticsDate(diag.lastScanAt || diag.updatedAt);
+    if ($diagStatus) $diagStatus.textContent = diag.status || '-';
+    if ($diagSource) $diagSource.textContent = diag.source || '-';
+    if ($diagCount) $diagCount.textContent = Number.isFinite(parseInt(diag.itemCount, 10)) ? String(parseInt(diag.itemCount, 10)) : '-';
+  });
 }
 
 // Override with multi-step onboarding (interactive)
@@ -1930,6 +2239,61 @@ function updatePronoteItem(index, patch) {
   });
 }
 
+function readHomeworkFilters() {
+  homeworkFilters.query = String($homeworkFilterQuery?.value || '').trim().toLowerCase();
+  homeworkFilters.type = String($homeworkFilterType?.value || 'all').toLowerCase();
+  homeworkFilters.difficulty = String($homeworkFilterDifficulty?.value || 'all').toLowerCase();
+  homeworkFilters.dueDate = String($homeworkFilterDate?.value || '').trim();
+}
+
+function hasActiveHomeworkFilters() {
+  return !!(homeworkFilters.query ||
+    (homeworkFilters.type && homeworkFilters.type !== 'all') ||
+    (homeworkFilters.difficulty && homeworkFilters.difficulty !== 'all') ||
+    homeworkFilters.dueDate);
+}
+
+function itemMatchesType(item, typeFilter) {
+  if (!typeFilter || typeFilter === 'all') return true;
+  if (item?.isReminder) return typeFilter === 'reminder';
+  const raw = String(item?.type || 'homework').toLowerCase();
+  if (typeFilter === 'homework') return raw === 'homework' || raw === 'both';
+  if (typeFilter === 'test') return raw === 'test' || raw === 'both';
+  return raw === typeFilter;
+}
+
+function itemMatchesFilters(item) {
+  if (!item) return false;
+  const f = homeworkFilters;
+  if (!itemMatchesType(item, f.type)) return false;
+  if (f.difficulty && f.difficulty !== 'all') {
+    if (item.isReminder) return false;
+    const diff = String(item.difficulty || 'medium').toLowerCase();
+    if (diff !== f.difficulty) return false;
+  }
+  if (f.dueDate && String(item.dueDate || '') !== f.dueDate) return false;
+  if (f.query) {
+    const haystack = [
+      item.subject,
+      item.notes,
+      item.reminderTag,
+      item.type,
+      item.dueDate
+    ].map(v => String(v || '').toLowerCase()).join(' ');
+    if (!haystack.includes(f.query)) return false;
+  }
+  return true;
+}
+
+function resetHomeworkFilters() {
+  if ($homeworkFilterQuery) $homeworkFilterQuery.value = '';
+  if ($homeworkFilterType) $homeworkFilterType.value = 'all';
+  if ($homeworkFilterDifficulty) $homeworkFilterDifficulty.value = 'all';
+  if ($homeworkFilterDate) $homeworkFilterDate.value = '';
+  readHomeworkFilters();
+  loadAll();
+}
+
 $modalDifficultySelect?.addEventListener('change', () => {
   if (modalCurrentIndex === null) return;
   updatePronoteItem(modalCurrentIndex, { difficulty: $modalDifficultySelect.value });
@@ -1942,7 +2306,11 @@ $modalMinutesInput?.addEventListener('change', () => {
 
 function renderOverviewList(items) {
   if (!$overview) return;
-  const src = Array.isArray(items) ? items : [];
+  readHomeworkFilters();
+  const raw = Array.isArray(items) ? items : [];
+  const src = raw
+    .map((it, idx) => (it && typeof it === 'object') ? { ...it, _sourceIndex: idx } : it)
+    .filter(itemMatchesFilters);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const cols = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
   src.forEach((it, idx) => {
@@ -1951,14 +2319,19 @@ function renderOverviewList(items) {
       const [y, m, d] = it.dueDate.split('-').map((v) => parseInt(v, 10));
       const dt = new Date(y, m - 1, d); dt.setHours(0, 0, 0, 0);
       const wd = dt.getDay();
-      if (cols[wd]) cols[wd].push({ ...it, _dt: dt, _index: idx });
+      const sourceIndex = Number.isFinite(it._sourceIndex) ? it._sourceIndex : idx;
+      if (cols[wd]) cols[wd].push({ ...it, _dt: dt, _index: sourceIndex });
     } catch (e) { logStorageError('renderOverviewList-date-parse', e); }
   });
   Object.values(cols).forEach(arr => arr.sort((a, b) => a._dt - b._dt || String(a.subject || '').localeCompare(b.subject || '')));
   const total = Object.values(cols).reduce((s, a) => s + a.length, 0);
   if (!total) {
     $overview.className = 'day';
-    $overview.innerHTML = `<div class="empty">No upcoming homework stored yet.</div>`;
+    $overview.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = hasActiveHomeworkFilters() ? t('filterEmpty') : 'No upcoming homework stored yet.';
+    $overview.appendChild(empty);
     return;
   }
   const wrapper = document.createElement('div'); wrapper.className = 'overview-grid';
@@ -2173,6 +2546,82 @@ function snapMinutes(totalMinutes, step = 15) {
   return Math.round(totalMinutes / step) * step;
 }
 
+function parseClockMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+function eventStartMinutes(ev) {
+  return ev && ev.start instanceof Date ? ev.start.getHours() * 60 + ev.start.getMinutes() : 0;
+}
+
+function eventEndMinutes(ev) {
+  if (!ev || !(ev.end instanceof Date)) return eventStartMinutes(ev) + 15;
+  return Math.max(eventStartMinutes(ev) + 15, ev.end.getHours() * 60 + ev.end.getMinutes());
+}
+
+function studyWindowsForDay(studyWindows, day) {
+  const source = studyWindows || defaultStudyWindows;
+  return (source[String(day)] || [])
+    .map((w) => ({ start: parseClockMinutes(w.start), end: parseClockMinutes(w.end) }))
+    .filter((w) => Number.isFinite(w.start) && Number.isFinite(w.end) && w.end > w.start)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+function addCalendarWarning(ev, message) {
+  if (!ev || !message) return;
+  const warnings = Array.isArray(ev.warnings) ? ev.warnings : [];
+  if (!warnings.includes(message)) warnings.push(message);
+  ev.warnings = warnings;
+}
+
+function annotateCalendarWarnings(events, studyWindows) {
+  const list = (Array.isArray(events) ? events : [])
+    .filter((ev) => ev && ev.start instanceof Date && ev.end instanceof Date)
+    .map((ev) => ({ ...ev, warnings: Array.isArray(ev.warnings) ? ev.warnings.slice() : [] }));
+  const recEvents = list.filter((ev) => ev.kind === 'rec');
+
+  for (const ev of list) {
+    if (ev.kind === 'rec') continue;
+    const start = eventStartMinutes(ev);
+    const end = eventEndMinutes(ev);
+    const day = ev.start.getDay();
+    const windows = studyWindowsForDay(studyWindows, day);
+    if (windows.length && !windows.some((w) => start >= w.start && end <= w.end)) {
+      addCalendarWarning(ev, t('calConflictOutside'));
+    }
+    const overlapsRecurring = recEvents.some((rec) => (
+      rec.start.toDateString() === ev.start.toDateString() &&
+      !(end <= eventStartMinutes(rec) || start >= eventEndMinutes(rec))
+    ));
+    if (overlapsRecurring) addCalendarWarning(ev, t('calConflictOverlap'));
+  }
+  return list;
+}
+
+function renderCalendarEvents(events, weekStart = calWeekStart) {
+  const targetWeekStart = new Date(weekStart);
+  syncGet({ studyWindows: defaultStudyWindows }, (cfg) => {
+    if (isoDateFromDate(targetWeekStart) !== isoDateFromDate(calWeekStart)) return;
+    const windows = cfg.studyWindows || defaultStudyWindows;
+    const annotated = annotateCalendarWarnings(events, windows);
+    const resolved = resolveHomeworkOverlaps(annotated);
+    updateCalendarWarningSummary(resolved);
+    renderCalendarGrid(resolved, targetWeekStart);
+  });
+}
+
+function updateCalendarWarningSummary(events) {
+  if (!$calWarningSummary) return;
+  const count = (Array.isArray(events) ? events : []).reduce((sum, ev) => sum + (Array.isArray(ev.warnings) ? ev.warnings.length : 0), 0);
+  $calWarningSummary.classList.toggle('active', count > 0);
+  $calWarningSummary.textContent = count > 0 ? formatTemplate(t('calWarningSummary'), { count }) : '';
+}
+
 function resolveHomeworkOverlaps(events) {
   const src = Array.isArray(events) ? events : [];
   if (!src.length) return src;
@@ -2243,6 +2692,27 @@ function savePlanOverride(id, date, time, minutes, title) {
       renderCalendar();
       showToast(formatTemplate(t('planMoved'), { title: title || t('studySession'), date, time }), 'success');
       triggerGcalSync();
+    });
+  });
+}
+
+function autoFitCurrentWeek() {
+  const startIso = isoDateFromDate(calWeekStart);
+  const end = new Date(calWeekStart);
+  end.setDate(end.getDate() + 7);
+  const endIso = isoDateFromDate(end);
+  localGet({ [PLAN_OVERRIDES_KEY]: {} }, (res) => {
+    const overrides = res[PLAN_OVERRIDES_KEY] || {};
+    const next = {};
+    for (const [id, value] of Object.entries(overrides)) {
+      const date = String(value?.date || '');
+      if (date && date >= startIso && date < endIso) continue;
+      next[id] = value;
+    }
+    localSet({ [PLAN_OVERRIDES_KEY]: next }, () => {
+      renderCalendar();
+      triggerGcalSync();
+      showToast(t('calAutoFitDone'), 'success');
     });
   });
 }
@@ -2513,6 +2983,11 @@ function renderCalendarGrid(events, weekStart) {
       const slot = document.createElement('div');
       const slotKind = ev.kind === 'rec' ? 'rec' : 'hw';
       slot.className = `cal-slot ${slotKind}`;
+      const warnings = Array.isArray(ev.warnings) ? ev.warnings.filter(Boolean) : [];
+      if (warnings.length) {
+        slot.classList.add('warn');
+        slot.title = warnings.join('\n');
+      }
       slot.style.top = `${top}%`;
       slot.style.height = `${height}%`;
       const gap = colCount > 1 ? 4 : 0;
@@ -2538,6 +3013,12 @@ function renderCalendarGrid(events, weekStart) {
       meta.className = 'cal-slot-meta';
       meta.textContent = ev.meta || '';
       slot.append(title, meta);
+      if (warnings.length) {
+        const warning = document.createElement('div');
+        warning.className = 'cal-slot-warning';
+        warning.textContent = warnings[0];
+        slot.appendChild(warning);
+      }
       if (slotKind === 'hw' && eventId) {
         slot.classList.add('draggable');
         const handle = document.createElement('div');
@@ -2682,14 +3163,15 @@ function renderCalendarGrid(events, weekStart) {
 }
 
 function renderCalendar() {
-  const start = new Date(calWeekStart);
-  const end = new Date(calWeekStart); end.setDate(end.getDate() + 7);
+  const renderWeekStart = new Date(calWeekStart);
+  const start = new Date(renderWeekStart);
+  const end = new Date(renderWeekStart); end.setDate(end.getDate() + 7);
   const inRange = (d) => d >= start && d < end;
 
   const fallback = () => {
     localGet({ pronoteItems: [], recurringEvents: [] }, (res) => {
-      const events = buildWeekEvents(calWeekStart, res.pronoteItems || [], res.recurringEvents || []);
-      renderCalendarGrid(resolveHomeworkOverlaps(events), calWeekStart);
+      const events = buildWeekEvents(renderWeekStart, res.pronoteItems || [], res.recurringEvents || []);
+      renderCalendarEvents(events, renderWeekStart);
     });
   };
 
@@ -2697,7 +3179,7 @@ function renderCalendar() {
     chrome.runtime.sendMessage({ type: 'GET_LOCAL_SCHEDULE' }, (resp) => {
       if (!resp || !resp.ok || !Array.isArray(resp.events)) { fallback(); return; }
       const events = resp.events.map((ev) => {
-        const st = ev.startDateTime ? new Date(ev.startDateTime) : new Date(ev.date || calWeekStart);
+        const st = ev.startDateTime ? new Date(ev.startDateTime) : new Date(ev.date || renderWeekStart);
         const en = ev.endDateTime ? new Date(ev.endDateTime) : new Date(st.getTime() + (ev.minutes || 60) * 60000);
         const minutes = parseInt(ev.minutes, 10) || Math.max(15, Math.round((en - st) / 60000));
         const info = parsePlanId(ev.id || '');
@@ -2713,7 +3195,7 @@ function renderCalendar() {
           subject: info?.subject || ''
         };
       }).filter(ev => inRange(ev.start));
-      renderCalendarGrid(resolveHomeworkOverlaps(events), calWeekStart);
+      renderCalendarEvents(events, renderWeekStart);
     });
   } catch {
     fallback();
@@ -2743,19 +3225,26 @@ function setActiveTab(which) {
   const isCalendar = which === 'calendar';
   const isSoftware = which === 'software';
   const isTechniques = which === 'techniques';
+  const isSettings = which === 'settings';
   if ($tabHomework) $tabHomework.classList.toggle('active', isHomework);
   if ($tabRecurring) $tabRecurring.classList.toggle('active', isRecurring);
   if ($tabCalendar) $tabCalendar.classList.toggle('active', isCalendar);
   if ($tabSoftware) $tabSoftware.classList.toggle('active', isSoftware);
   if ($tabTechniques) $tabTechniques.classList.toggle('active', isTechniques);
+  if ($tabSettings) $tabSettings.classList.toggle('active', isSettings);
   if ($sectionHomework) $sectionHomework.classList.toggle('hidden', !isHomework);
   if ($sectionRecurring) $sectionRecurring.classList.toggle('hidden', !isRecurring);
   if ($sectionCalendar) $sectionCalendar.classList.toggle('hidden', !isCalendar);
   if ($sectionSoftware) $sectionSoftware.classList.toggle('hidden', !isSoftware);
   if ($sectionTechniques) $sectionTechniques.classList.toggle('hidden', !isTechniques);
+  if ($sectionSettings) $sectionSettings.classList.toggle('hidden', !isSettings);
   if (isCalendar) renderCalendar();
   if (isSoftware) renderSoftwareList();
   if (isTechniques) renderTechniquesList();
+  if (isSettings) {
+    loadNotificationSettings();
+    loadDiagnostics();
+  }
 }
 
 function initTabs() {
@@ -2764,6 +3253,7 @@ function initTabs() {
   $tabCalendar?.addEventListener('click', () => setActiveTab('calendar'));
   $tabSoftware?.addEventListener('click', () => setActiveTab('software'));
   $tabTechniques?.addEventListener('click', () => setActiveTab('techniques'));
+  $tabSettings?.addEventListener('click', () => setActiveTab('settings'));
   setActiveTab('homework');
 }
 
@@ -2809,12 +3299,24 @@ $studyPageButton?.addEventListener('click', () => { window.location.href = chrom
 $techniqueBack?.addEventListener('click', () => {
   renderTechniquesList();
 });
+[$homeworkFilterQuery, $homeworkFilterType, $homeworkFilterDifficulty, $homeworkFilterDate].forEach((el) => {
+  el?.addEventListener(el === $homeworkFilterQuery ? 'input' : 'change', () => {
+    readHomeworkFilters();
+    scheduleStorageRefresh(() => loadAll(), 80);
+  });
+});
+$homeworkFilterReset?.addEventListener('click', resetHomeworkFilters);
 $calRefresh?.addEventListener('click', () => {
   loadAll();
   renderCalendar();
   showToast(t('calUpdated'), 'success');
 });
+$calAutoFit?.addEventListener('click', autoFitCurrentWeek);
 $calExport?.addEventListener('click', exportIcsNow);
+$notifySave?.addEventListener('click', saveNotificationSettings);
+$backupExport?.addEventListener('click', exportBackupData);
+$backupImport?.addEventListener('click', () => $backupImportFile?.click());
+$backupImportFile?.addEventListener('change', () => importBackupFile($backupImportFile.files && $backupImportFile.files[0]));
 $calClear?.addEventListener('click', () => {
   if (!confirm(t('calClearConfirm'))) return;
   localSet({ [RECURRING_KEY]: [], [PLAN_OVERRIDES_KEY]: {} }, () => {
@@ -2878,6 +3380,8 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
   initTabs();
   initSoftwareFilter();
   loadStudyDurations();
+  loadNotificationSettings();
+  loadDiagnostics();
   syncGet({ language: 'en' }, (res) => {
     const lang = (res && res.language === 'fr') ? 'fr' : 'en';
     setLanguage(lang, false);
@@ -2896,6 +3400,7 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
         const needsAllReload = !!(changes.pronoteItems || changes.reminders);
         const needsCalendarReload = !!(changes[RECURRING_KEY] || changes[PLAN_OVERRIDES_KEY]);
         const needsDeletedReload = !!changes.pronoteDeletedItems;
+        const needsDiagnosticsReload = !!changes.captureDiagnostics;
         if (needsAllReload) {
           scheduleStorageRefresh(() => loadAll(), 60);
         } else if (needsCalendarReload) {
@@ -2907,11 +3412,21 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
           localGet({ pronoteDeletedItems: [] }, (res) => {
             renderDeletedItems(res.pronoteDeletedItems || []);
           });
+        } else if (needsDiagnosticsReload) {
+          loadDiagnostics();
         }
       }
       if (area === 'sync' && changes.language) {
         const next = changes.language?.newValue === 'fr' ? 'fr' : 'en';
         if (next !== currentLang) setLanguage(next, false);
+      } else if (area === 'sync' && (
+        changes.dueNotificationsEnabled ||
+        changes.dueNotifyHour ||
+        changes.dueNotifyMinute ||
+        changes.dueNotifyHomework ||
+        changes.dueNotifyReminders
+      )) {
+        loadNotificationSettings();
       }
     });
   } catch (e) { logStorageError('storage-onChanged', e); }
