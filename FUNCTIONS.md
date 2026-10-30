@@ -70,8 +70,20 @@ Core responsibilities:
      the stored `icsUrl`, so the worker cannot be used as a cross-origin fetch proxy.
    - No host permission covers arbitrary feed domains, so fetches need permissive CORS.
 
-options.js / options.html
+options/ and options.html
 -------------------------
+Layout:
+- `options.html` loads `options/*.js` in filename order as plain scripts sharing one
+  scope, so a file may only use names declared in a file above it.
+- `01-globals.js` holds the constants, element handles and shared mutable state;
+  `17-init.js` holds the listeners and start-up and has to stay last.
+- The rest is one file per concern: storage wrappers, translations, static catalogues,
+  language, software/techniques, onboarding, item helpers, homework list, schedule
+  panels, overview, recurring, calendar helpers, study sessions, calendar rendering,
+  and tabs/loading.
+- `validate-release.js` fails the build if the script tags in `options.html` and the
+  contents of `options/` drift apart.
+
 Tabs:
 - Homework, Recurring, Calendar, Software, Techniques.
 

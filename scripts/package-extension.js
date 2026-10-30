@@ -20,7 +20,7 @@ const entries = [
   "popup.html",
   "popup.js",
   "options.html",
-  "options.js",
+  "options",
   "settings.html",
   "settings.js",
   "Icon",

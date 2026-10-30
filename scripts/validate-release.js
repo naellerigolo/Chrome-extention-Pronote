@@ -17,7 +17,7 @@ const requiredFiles = [
   "popup.html",
   "popup.js",
   "options.html",
-  "options.js",
+  "options",
   "settings.html",
   "settings.js",
   "PRIVACY.md",
@@ -80,11 +80,13 @@ const hostPermissions = Array.isArray(manifest.host_permissions) ? manifest.host
 if (!hostPermissions.includes("https://*.index-education.net/pronote/*")) fail("Missing PRONOTE host permission.");
 if (!hostPermissions.includes("https://www.googleapis.com/*")) fail("Missing Google APIs host permission.");
 
+const optionsParts = fs.readdirSync(path.join(root, "options")).filter((f) => f.endsWith(".js")).sort().map((f) => `options/${f}`);
+
 const scannedFiles = [
   "manifest.json",
   "background.js",
   "options.html",
-  "options.js",
+  ...optionsParts,
   "popup.html",
   "popup.js",
   "scanner.js",
@@ -98,6 +100,14 @@ for (const file of scannedFiles) {
   if (/AI_SYSTEM_PROMPT|buildAiPromptFromItem|modalAskAi|section-ai|tab-ai/i.test(text)) {
     fail(`Removed AI tutor surface appears to be back in ${file}.`);
   }
+}
+
+// options.html loads options/*.js as ordered plain scripts, so a tag that is
+// missing, stale, or out of order breaks the page at runtime.
+const optionsHtml = fs.readFileSync(path.join(root, "options.html"), "utf8");
+const taggedParts = [...optionsHtml.matchAll(/<script src="(options\/[^"?]+)/g)].map((m) => m[1]);
+if (taggedParts.join(",") !== optionsParts.join(",")) {
+  fail(`options.html script tags do not match options/: tags [${taggedParts.join(" ")}] vs files [${optionsParts.join(" ")}]`);
 }
 
 if (problems.length) {

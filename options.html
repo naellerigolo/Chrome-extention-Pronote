@@ -1878,6 +1878,24 @@
 
     <div id="toast-host" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="options.js?v=20250116c8"></script>
+    <!-- options/ is loaded in order: each file is a plain script sharing one scope,
+         so a file may only use names declared in a file above it. -->
+    <script src="options/01-globals.js?v=20250116c8"></script>
+    <script src="options/02-storage.js?v=20250116c8"></script>
+    <script src="options/03-translations.js?v=20250116c8"></script>
+    <script src="options/04-catalogs.js?v=20250116c8"></script>
+    <script src="options/05-language.js?v=20250116c8"></script>
+    <script src="options/06-software-techniques.js?v=20250116c8"></script>
+    <script src="options/07-onboarding.js?v=20250116c8"></script>
+    <script src="options/08-items.js?v=20250116c8"></script>
+    <script src="options/09-homework.js?v=20250116c8"></script>
+    <script src="options/10-schedule-panels.js?v=20250116c8"></script>
+    <script src="options/11-overview.js?v=20250116c8"></script>
+    <script src="options/12-recurring.js?v=20250116c8"></script>
+    <script src="options/13-calendar.js?v=20250116c8"></script>
+    <script src="options/14-study-sessions.js?v=20250116c8"></script>
+    <script src="options/15-calendar-render.js?v=20250116c8"></script>
+    <script src="options/16-tabs.js?v=20250116c8"></script>
+    <script src="options/17-init.js?v=20250116c8"></script>
   </body>
 </html>
