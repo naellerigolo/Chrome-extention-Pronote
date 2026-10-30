@@ -1,15 +1,4 @@
 (() => {
-  // Default minutes per combination
-  const defaultStudyDurations = {
-    homework: { easy: 25, medium: 45, hard: 75 },
-    test: { easy: 30, medium: 60, hard: 90 }
-  };
-
-  const DAY_NAMES = {
-    en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    fr: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-  };
-
   const DAY_RENDER_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
   const START_HOUR = 6;
   const END_HOUR = 23;
@@ -17,20 +6,6 @@
   const SNAP_MIN = 15;
   const totalHeight = (END_HOUR - START_HOUR + 1) * ROW_HEIGHT;
 
-  const defaultStudyWindows = {
-    '1': [{ start: '18:00', end: '21:00' }],
-    '2': [{ start: '18:00', end: '21:00' }],
-    '3': [{ start: '18:00', end: '21:00' }],
-    '4': [{ start: '18:00', end: '21:00' }],
-    '5': [{ start: '18:00', end: '21:00' }],
-    '0': [{ start: '10:00', end: '20:00' }],
-    '6': [{ start: '10:00', end: '20:00' }]
-  };
-
-  const RECURRING_KEY = 'recurringEvents';
-  const PLAN_OVERRIDES_KEY = 'planOverrides';
-  const STUDY_SESSIONS_KEY = 'studySessions';
-  const ONBOARDING_KEY = 'onboarding_seen';
   const defaultNotificationPrefs = {
     dueNotificationsEnabled: true,
     dueNotifyHour: 17,

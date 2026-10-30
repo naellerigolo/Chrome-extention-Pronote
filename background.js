@@ -1,9 +1,7 @@
 "use strict";
 
-const defaultStudyDurations = {
-  homework: { easy: 25, medium: 45, hard: 75 },
-  test: { easy: 30, medium: 60, hard: 90 }
-};
+// Values and pure helpers shared with the options and settings pages.
+importScripts('shared/core.js');
 
 const EXTENSION_ID = chrome.runtime.id;
 const EXTENSION_URL = chrome.runtime.getURL('');
@@ -13,7 +11,6 @@ const EXT_STATE_VERSION_KEY = 'extensionStateVersion';
 const EXT_STATE_VERSION = 2;
 const MANAGED_CAL_SUMMARY = 'PRONOTE Planner';
 const MANAGED_CAL_DESC_MARKER = '[managed-by-pronote-planner]';
-const MAX_PRONOTE_ITEMS = 1200;
 const DEFAULT_DUE_NOTIFICATION_PREFS = {
   dueNotificationsEnabled: true,
   dueNotifyHour: 17,
@@ -69,15 +66,6 @@ function syncGet(defaults) {
     try { chrome.storage.sync.get(defaults, resolve); }
     catch (e) { warn('syncGet', e); resolve(defaults || {}); }
   });
-}
-
-function prunePronoteItems(list) {
-  const src = Array.isArray(list) ? list : [];
-  if (src.length <= MAX_PRONOTE_ITEMS) return src;
-  return src
-    .slice()
-    .sort((a, b) => String(a?.dueDate || '').localeCompare(String(b?.dueDate || '')))
-    .slice(-MAX_PRONOTE_ITEMS);
 }
 
 async function runStartupMigration() {
@@ -669,11 +657,6 @@ function resolveDifficulty(value) {
   if (text === 'easy' || text === 'hard') return text;
   if (text.includes('epreuve') || text.includes('épreuve')) return 'hard';
   return 'medium';
-}
-
-function resolveItemKind(item) {
-  const type = String(item?.type || '').toLowerCase();
-  return type === 'test' || type === 'both' ? 'test' : 'homework';
 }
 
 function daysUntilISO(iso) {

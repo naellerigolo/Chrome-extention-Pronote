@@ -1,8 +1,4 @@
 // Shared constants, element handles and mutable page state. Loaded first; everything else reads these.
-const DAY_NAMES = {
-  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-  fr: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-};
 const $overview = document.getElementById('overview');
 const $hwSummary = document.getElementById('hw-summary');
 const $deleteAllBtn = document.getElementById('delete-all-items');
@@ -100,29 +96,11 @@ const planOverridesMem = {};
 const CAL_DAY_START = 6 * 60;
 const CAL_DAY_END = 24 * 60;
 
-const RECURRING_KEY = 'recurringEvents';
-const PLAN_OVERRIDES_KEY = 'planOverrides';
-const STUDY_SESSIONS_KEY = 'studySessions';
 const defaultReminderTag = 'Reminder';
-const ONBOARDING_KEY = 'onboarding_seen';
-const MAX_PRONOTE_ITEMS = 1200;
 const MAX_DELETED_ITEMS = 200;
-const defaultStudyDurations = {
-  homework: { easy: 25, medium: 45, hard: 75 },
-  test: { easy: 30, medium: 60, hard: 90 }
-};
 let cachedStudyDurations = defaultStudyDurations;
 let cachedTimeFormat = '12h';
 let homeworkSchedulePanels = null;
-const defaultStudyWindows = {
-  '1': [{ start: '18:00', end: '21:00' }],
-  '2': [{ start: '18:00', end: '21:00' }],
-  '3': [{ start: '18:00', end: '21:00' }],
-  '4': [{ start: '18:00', end: '21:00' }],
-  '5': [{ start: '18:00', end: '21:00' }],
-  '6': [{ start: '10:00', end: '20:00' }],
-  '0': [{ start: '10:00', end: '20:00' }]
-};
 const homeworkFilters = {
   query: '',
   type: 'all',

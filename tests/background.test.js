@@ -51,6 +51,14 @@ globalThis.__testExports = {
     fetch: async () => ({ ok: false, text: async () => '', json: async () => ({}) }),
     setTimeout: () => 0,
     clearTimeout: noop,
+    // The worker pulls in shared/core.js this way, so mirror it here: the shared
+    // constants and helpers then resolve exactly as they do in Chrome.
+    importScripts: (...files) => {
+      for (const file of files) {
+        const resolved = path.join(__dirname, '..', file);
+        vm.runInContext(fs.readFileSync(resolved, 'utf8'), context, { filename: resolved });
+      }
+    },
     chrome: {
       runtime: {
         id: 'test-extension',

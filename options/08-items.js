@@ -27,11 +27,6 @@ function parseISODateLocal(iso) {
   return new Date(y, m - 1, d);
 }
 
-function resolveItemKind(item) {
-  const type = String(item?.type || '').toLowerCase();
-  return type === 'test' || type === 'both' ? 'test' : 'homework';
-}
-
 function resolveItemDifficulty(item) {
   const text = String(item?.difficulty || '').toLowerCase();
   if (text === 'easy' || text === 'hard') return text;

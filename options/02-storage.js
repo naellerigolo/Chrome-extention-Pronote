@@ -62,9 +62,3 @@ function localRemove(keys, cb) {
     if (typeof cb === 'function') cb();
   }
 }
-
-function prunePronoteItems(list) {
-  const src = Array.isArray(list) ? list : [];
-  if (src.length <= MAX_PRONOTE_ITEMS) return src;
-  return src.slice(-MAX_PRONOTE_ITEMS);
-}

@@ -21,6 +21,7 @@ const entries = [
   "popup.js",
   "options.html",
   "options",
+  "shared",
   "settings.html",
   "settings.js",
   "Icon",
