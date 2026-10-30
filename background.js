@@ -95,6 +95,13 @@ async function runStartupMigration() {
     if (Object.keys(patch).length) await localSet(patch);
     // Purge any leftover credentials from the removed tutor feature.
     await localRemove(['aiBackendToken', 'aiBackendUser', 'aiBackendUrl']);
+    // Drop the diagnostics field left behind by the retired scan-time download path.
+    const diag = await localGet({ captureDiagnostics: null });
+    if (diag.captureDiagnostics && 'skippedDownloads' in diag.captureDiagnostics) {
+      const cleaned = { ...diag.captureDiagnostics };
+      delete cleaned.skippedDownloads;
+      await localSet({ captureDiagnostics: cleaned });
+    }
   } catch (e) {
     warn('startup-migration', e);
   }
@@ -294,7 +301,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'PRONOTE_FETCH_ICS') {
     (async () => {
       try {
-        const resp = await fetch(msg.url, { cache: 'no-cache' });
+        // Content scripts may only ask for the feed the user configured, never an
+        // arbitrary URL: the worker must not act as a cross-origin fetch proxy.
+        const cfg = await new Promise(r => chrome.storage.sync.get({ icsEnabled: false, icsUrl: '' }, r));
+        if (!cfg.icsEnabled || !cfg.icsUrl || String(msg.url || '') !== String(cfg.icsUrl)) {
+          sendResponse({ ok: false, error: 'forbidden' });
+          return;
+        }
+        const resp = await fetch(cfg.icsUrl, { cache: 'no-cache' });
         const text = await resp.text();
         sendResponse({ ok: true, text });
       } catch (e) {
@@ -367,12 +381,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       lastScanAt: new Date().toISOString(),
       status: 'captured',
       source: parsed && parsed.source || sender && sender.url || sender && sender.tab && sender.tab.url || '',
-      itemCount: items.length,
-      skippedDownloads: !!msg.skipDownloads
+      itemCount: items.length
     }).catch(e => warn('capture-diagnostics-snapshot', e));
   } catch (e) { warn('snapshot-diagnostics', e); }
   triggerAutoGcalSync('snapshot-no-download');
-  sendResponse({ ok: true, skippedDownloads: true });
+  sendResponse({ ok: true });
   return true;
 });
 
@@ -577,32 +590,9 @@ async function refreshIcsIfEnabled() {
   const { merged, added } = mergeItems(stored, consolidateItems(icsItems));
   if (added === 0) return { ok: true, added: 0, total: merged.length };
   await localSet({ pronoteItems: prunePronoteItems(merged) });
-  const durations = (cfg && cfg.studyDurations) || defaultStudyDurations;
-  const plan = makeStudyPlan(merged, durations, cfg.language || 'en');
-  const baseHost = (() => { try { return new URL(cfg.icsUrl).hostname; } catch { return 'pronote'; } })();
-  const base = `pronote_${baseHost.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-  const files = [
-    { mime: 'text/plain', name: `${base}_homework_only.txt`, text: itemsToTxt(merged, cfg.icsUrl) },
-    { mime: 'application/json', name: `${base}_homework.json`, text: JSON.stringify({ source: cfg.icsUrl, collectedAt: new Date().toISOString(), items: merged }, null, 2) },
-    { mime: 'text/csv', name: `${base}_study_plan.csv`, text: toCSV(plan) },
-    { mime: 'text/calendar', name: `${base}_study_plan.ics`, text: toICS(plan, cfg.studyWindows) }
-  ];
-  for (const f of files) {
-    await new Promise(res => chrome.downloads.download({ url: toDataUrl(f.mime, f.text), filename: f.name, saveAs: false, conflictAction: 'overwrite' }, () => res()));
-  }
+  // Imported items stay in local storage only. Files are written to disk exclusively
+  // through the user-triggered .ics export and JSON backup actions.
   return { ok: true, added, total: merged.length };
-}
-
-function itemsToTxt(items, source) {
-  const lines = []; lines.push(`Source: ${source || ''}`); lines.push(`Collected: ${new Date().toISOString()}`); lines.push('');
-  let lastDate = '';
-  for (const it of items) {
-    if (it.dueDate !== lastDate) { lines.push(it.dueDate); lines.push(''); lastDate = it.dueDate; }
-    lines.push(it.subject || '');
-    const n = (it.notes || '').trim(); if (n) lines.push(n);
-    lines.push('');
-  }
-  return lines.join('\n');
 }
 
 function norm(s) { return String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -846,11 +836,6 @@ function makeStudyPlan(items, studyDurations, language = 'en') {
   }
   sessions.sort((a, b) => a.date.localeCompare(b.date) || comparePlanRows(a, b));
   return sessions;
-}
-
-function toCSV(rows) {
-  const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
-  return [["Date", "Title", "Minutes", "Notes"]].concat((rows || []).map(r => [r.date, r.title, r.minutes, r.notes])).map(r => r.map(esc).join(',')).join('\n');
 }
 
 function buildRecurringOccurrences(list, horizonDays = 365, language = 'en') {

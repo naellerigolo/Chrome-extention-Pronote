@@ -298,6 +298,20 @@
         font-size: 13px;
       }
 
+      .control-panel label.filter-check {
+        flex-direction: row;
+        align-items: center;
+        align-self: end;
+        gap: 8px;
+        min-height: 36px;
+      }
+
+      .control-panel label.filter-check input {
+        width: auto;
+        min-height: 0;
+        accent-color: var(--accent);
+      }
+
       .calendar-warning {
         display: none;
         margin: 8px 0 10px;
@@ -317,6 +331,262 @@
 
       .overview-shell {
         margin-top: 8px;
+      }
+
+      .hw-summary {
+        display: grid;
+        grid-template-columns: minmax(200px, 0.85fr) 2fr;
+        gap: 14px;
+        margin: 14px 0 2px;
+      }
+
+      .hw-summary:empty { display: none; }
+
+      .hw-hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 16px 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 70%),
+          var(--card);
+      }
+
+      .hw-hero-value {
+        font-size: 48px;
+        line-height: 1.05;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .hw-hero-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-soft);
+      }
+
+      .hw-hero-sub {
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-soft);
+      }
+
+      .hw-hero-sub strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .hw-panels {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .hw-kpis {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+        gap: 10px;
+      }
+
+      .hw-kpi {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--card);
+      }
+
+      .hw-kpi-label {
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      .hw-kpi-value {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .hw-kpi.is-urgent {
+        border-color: rgba(251, 191, 36, 0.45);
+        background: rgba(251, 191, 36, 0.1);
+      }
+
+      .hw-kpi.is-muted .hw-kpi-value { color: var(--text-soft); }
+
+      .hw-checkin {
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(251, 191, 36, 0.4);
+        background: rgba(251, 191, 36, 0.08);
+      }
+
+      .hw-checkin:empty { display: none; }
+
+      .hw-checkin-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 2px;
+        font-size: 12px;
+        color: var(--text);
+      }
+
+      .hw-checkin-row + .hw-checkin-row {
+        border-top: 1px solid rgba(251, 191, 36, 0.18);
+      }
+
+      .hw-checkin-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hw-checkin-when {
+        font-size: 11px;
+        color: var(--text-soft);
+        white-space: nowrap;
+      }
+
+      .hw-checkin-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .hw-checkin-btn {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(2, 6, 23, 0.55);
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        cursor: pointer;
+        transition: background var(--transition-fast), border-color var(--transition-fast);
+      }
+
+      .hw-checkin-btn:hover { border-color: rgba(37, 99, 235, 0.55); }
+
+      .hw-checkin-btn.is-yes {
+        border-color: rgba(34, 197, 94, 0.5);
+        color: #bbf7d0;
+      }
+
+      .hw-upnext {
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--card);
+      }
+
+      .hw-upnext-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .hw-upnext-row + .hw-upnext-row { margin-top: 2px; }
+
+      .hw-upnext-row.is-next {
+        background: var(--accent-soft);
+        border: 1px solid rgba(37, 99, 235, 0.45);
+        padding: 5px 7px;
+      }
+
+      .hw-upnext-time {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .hw-upnext-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--text);
+      }
+
+      .hw-upnext-day {
+        white-space: nowrap;
+        font-size: 11px;
+      }
+
+      .hw-upnext-empty {
+        padding: 4px 8px;
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+
+      .hw-subjects {
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--card);
+      }
+
+      .hw-subjects-title {
+        font-size: 11px;
+        color: var(--text-soft);
+        margin-bottom: 8px;
+      }
+
+      .hw-subject-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        font-size: 12px;
+        color: var(--text);
+      }
+
+      .hw-subject-row + .hw-subject-row { margin-top: 2px; }
+
+      .hw-subject-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: var(--accent-soft);
+        border-radius: var(--radius-sm);
+      }
+
+      .hw-subject-name {
+        position: relative;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hw-subject-count {
+        position: relative;
+        color: var(--text-soft);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hw-subject-more {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      @media (max-width: 780px) {
+        .hw-summary { grid-template-columns: 1fr; }
       }
 
       .overview-grid {
@@ -1169,17 +1439,6 @@
       }
       .cal-slot-title { font-weight: 700; font-size: 12px; }
       .cal-slot-meta { font-size: 10px; opacity: 0.9; }
-      .priority-badge {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        padding: 2px 7px;
-        background: rgba(251, 191, 36, 0.18);
-        border: 1px solid rgba(251, 191, 36, 0.42);
-        color: #fde68a;
-        font-size: 10px;
-        font-weight: 700;
-      }
       .cal-slot-actions {
         display: flex;
         gap: 5px;
@@ -1337,7 +1596,7 @@
   <body>
     <div class="top-bar">
       <div class="study-button-row">
-        <button id="open-study-duration-page" class="study-btn" type="button" aria-label="Study time rules">
+        <button id="open-settings-page" class="study-btn" type="button" aria-label="Settings">
           <span class="study-btn-icon">⚙️</span>
         </button>
       </div>
@@ -1373,6 +1632,7 @@
           <button id="delete-all-items" class="btn btn-ghost" type="button" data-i18n="btnDeleteAll">Delete all homework & tests</button>
           <button id="view-deleted-items" class="btn btn-ghost" type="button" data-i18n="btnViewDeleted">View deleted items</button>
         </div>
+        <div class="hw-summary" id="hw-summary"></div>
         <div class="control-panel" id="homework-filters">
           <label>
             <span data-i18n="filterSearch">Search</span>
@@ -1399,6 +1659,10 @@
           <label>
             <span data-i18n="filterDue">Due date</span>
             <input id="homework-filter-date" type="date" />
+          </label>
+          <label class="filter-check">
+            <input id="homework-filter-past" type="checkbox" />
+            <span data-i18n="filterShowPast">Show past items</span>
           </label>
           <button id="homework-filter-reset" class="btn btn-ghost" type="button" data-i18n="filterReset">Reset filters</button>
         </div>

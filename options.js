@@ -5,12 +5,13 @@ const DAY_NAMES = {
   fr: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 };
 const $overview = document.getElementById('overview');
+const $hwSummary = document.getElementById('hw-summary');
 const $deleteAllBtn = document.getElementById('delete-all-items');
 const $viewDeletedBtn = document.getElementById('view-deleted-items');
 const $deletedModal = document.getElementById('deleted-modal');
 const $deletedClose = document.getElementById('deleted-close');
 const $deletedList = document.getElementById('deleted-list');
-const $studyPageButton = document.getElementById('open-study-duration-page');
+const $settingsPageButton = document.getElementById('open-settings-page');
 const $homeworkModal = document.getElementById('homework-modal');
 const $modalSubject = document.getElementById('modal-subject');
 const $modalDue = document.getElementById('modal-due');
@@ -52,6 +53,7 @@ const $homeworkFilterQuery = document.getElementById('homework-filter-query');
 const $homeworkFilterType = document.getElementById('homework-filter-type');
 const $homeworkFilterDifficulty = document.getElementById('homework-filter-difficulty');
 const $homeworkFilterDate = document.getElementById('homework-filter-date');
+const $homeworkFilterPast = document.getElementById('homework-filter-past');
 const $homeworkFilterReset = document.getElementById('homework-filter-reset');
 const $softwareGrid = document.getElementById('software-grid');
 const $softwareFilters = document.getElementById('software-filters');
@@ -111,6 +113,8 @@ const defaultStudyDurations = {
   test: { easy: 30, medium: 60, hard: 90 }
 };
 let cachedStudyDurations = defaultStudyDurations;
+let cachedTimeFormat = '12h';
+let homeworkSchedulePanels = null;
 const defaultStudyWindows = {
   '1': [{ start: '18:00', end: '21:00' }],
   '2': [{ start: '18:00', end: '21:00' }],
@@ -124,7 +128,9 @@ const homeworkFilters = {
   query: '',
   type: 'all',
   difficulty: 'all',
-  dueDate: ''
+  dueDate: '',
+  showPast: false,
+  todayISO: ''
 };
 
 function logStorageError(scope, err) {
@@ -228,6 +234,27 @@ const TRANSLATIONS = {
     filterDue: 'Due date',
     filterReset: 'Reset filters',
     filterEmpty: 'No items match those filters.',
+    sumUpcoming: 'Upcoming items',
+    sumStudyPlanned: 'of study planned',
+    sumNextUp: 'Next deadline:',
+    sumUpNext: 'Up next',
+    ciTitle: 'Did you do these?',
+    ciYes: 'Done',
+    ciNo: 'Not yet',
+    sumNoSessions: 'No study sessions scheduled yet.',
+    sumDueToday: 'Due today',
+    sumDueTomorrow: 'Due tomorrow',
+    sumNext7: 'Next 7 days',
+    sumTests: 'Tests ahead',
+    sumPastHidden: 'Past, hidden',
+    sumSubjects: 'Busiest subjects',
+    sumMore: 'more',
+    sumToday: 'today',
+    sumTomorrow: 'tomorrow',
+    sumInDays: 'in',
+    sumDays: 'days',
+    filterShowPast: 'Show past items',
+    emptyPastHidden: 'No upcoming homework. Tick "Show past items" to see earlier work.',
     labelDifficulty: 'Difficulty',
     diffEasy: 'Easy',
     diffMedium: 'Medium',
@@ -480,6 +507,27 @@ const TRANSLATIONS = {
     filterDue: 'Date limite',
     filterReset: 'Réinitialiser les filtres',
     filterEmpty: 'Aucun élément ne correspond aux filtres.',
+    sumUpcoming: 'Devoirs à venir',
+    sumStudyPlanned: 'de travail estimé',
+    sumNextUp: 'Prochaine échéance :',
+    sumUpNext: 'À faire ensuite',
+    ciTitle: 'As-tu fait ces séances ?',
+    ciYes: 'Fait',
+    ciNo: 'Pas encore',
+    sumNoSessions: 'Aucune séance planifiée pour l’instant.',
+    sumDueToday: 'À rendre aujourd’hui',
+    sumDueTomorrow: 'À rendre demain',
+    sumNext7: 'Dans 7 jours',
+    sumTests: 'Évaluations à venir',
+    sumPastHidden: 'Passés, masqués',
+    sumSubjects: 'Matières les plus chargées',
+    sumMore: 'autres',
+    sumToday: 'aujourd’hui',
+    sumTomorrow: 'demain',
+    sumInDays: 'dans',
+    sumDays: 'jours',
+    filterShowPast: 'Afficher les éléments passés',
+    emptyPastHidden: 'Aucun devoir à venir. Cochez « Afficher les éléments passés » pour voir le travail antérieur.',
     labelDifficulty: 'Difficulté',
     diffEasy: 'Facile',
     diffMedium: 'Moyen',
@@ -1023,6 +1071,14 @@ let softwareFilterKey = 'all';
 function dayLabel(idx) {
   const arr = DAY_NAMES[currentLang] || DAY_NAMES.en;
   return arr[idx] || DAY_NAMES.en[idx] || '';
+}
+
+function overviewColumnLabel(iso) {
+  const [y, m, d] = String(iso || '').split('-').map((v) => parseInt(v, 10));
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return String(iso || '');
+  const locale = currentLang === 'fr' ? 'fr-FR' : 'en-US';
+  return `${dayLabel(dt.getDay())} ${dt.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
 }
 
 function startOfWeek(date) {
@@ -2016,8 +2072,9 @@ function extractLinks(text) {
 }
 
 function loadStudyDurations(done) {
-  syncGet({ studyDurations: defaultStudyDurations }, (res) => {
+  syncGet({ studyDurations: defaultStudyDurations, timeFormat: '12h' }, (res) => {
     cachedStudyDurations = res.studyDurations || defaultStudyDurations;
+    cachedTimeFormat = res.timeFormat === '24h' ? '24h' : '12h';
     if (typeof done === 'function') done();
   });
 }
@@ -2088,6 +2145,8 @@ function readHomeworkFilters() {
   homeworkFilters.type = String($homeworkFilterType?.value || 'all').toLowerCase();
   homeworkFilters.difficulty = String($homeworkFilterDifficulty?.value || 'all').toLowerCase();
   homeworkFilters.dueDate = String($homeworkFilterDate?.value || '').trim();
+  homeworkFilters.showPast = !!$homeworkFilterPast?.checked;
+  homeworkFilters.todayISO = formatISODate(new Date()) || '';
 }
 
 function hasActiveHomeworkFilters() {
@@ -2109,6 +2168,8 @@ function itemMatchesType(item, typeFilter) {
 function itemMatchesFilters(item) {
   if (!item) return false;
   const f = homeworkFilters;
+  // Hide work whose due date has passed unless the user asks to see it.
+  if (!f.showPast && f.todayISO && String(item.dueDate || '') && String(item.dueDate) < f.todayISO) return false;
   if (!itemMatchesType(item, f.type)) return false;
   if (f.difficulty && f.difficulty !== 'all') {
     if (item.isReminder) return false;
@@ -2134,6 +2195,7 @@ function resetHomeworkFilters() {
   if ($homeworkFilterType) $homeworkFilterType.value = 'all';
   if ($homeworkFilterDifficulty) $homeworkFilterDifficulty.value = 'all';
   if ($homeworkFilterDate) $homeworkFilterDate.value = '';
+  if ($homeworkFilterPast) $homeworkFilterPast.checked = false;
   readHomeworkFilters();
   loadAll();
 }
@@ -2148,6 +2210,334 @@ $modalMinutesInput?.addEventListener('change', () => {
   updatePronoteItem(modalCurrentIndex, { manualMinutes: Number.isFinite(val) && val > 0 ? val : null });
 });
 
+function formatClock(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const h24 = cachedTimeFormat === '24h';
+  return date.toLocaleTimeString(currentLang === 'fr' ? 'fr-FR' : 'en-US', {
+    hour: h24 ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: !h24
+  });
+}
+
+// The next few study sessions, with the clock times the calendar would show.
+function renderUpNextRows(panel, events) {
+  if (!panel) return;
+  panel.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'hw-subjects-title';
+  title.textContent = t('sumUpNext');
+  panel.appendChild(title);
+  const now = new Date();
+  const todayISO = homeworkFilters.todayISO || formatISODate(now) || '';
+  const upcoming = (events || [])
+    .filter((ev) => ev && ev.kind !== 'rec' && ev.start instanceof Date && ev.end instanceof Date && ev.end > now)
+    .sort((a, b) => a.start - b.start)
+    .slice(0, 3);
+  if (!upcoming.length) {
+    const empty = document.createElement('div');
+    empty.className = 'hw-upnext-empty';
+    empty.textContent = t('sumNoSessions');
+    panel.appendChild(empty);
+    return;
+  }
+  upcoming.forEach((ev, idx) => {
+    const row = document.createElement('div');
+    row.className = idx === 0 ? 'hw-upnext-row is-next' : 'hw-upnext-row';
+    const when = document.createElement('span');
+    when.className = 'hw-upnext-time';
+    when.textContent = `${formatClock(ev.start)} - ${formatClock(ev.end)}`;
+    const name = document.createElement('span');
+    name.className = 'hw-upnext-name';
+    name.textContent = ev.subject || ev.title || '';
+    const day = document.createElement('span');
+    day.className = 'hw-upnext-day';
+    day.textContent = relativeDueLabel(formatISODate(ev.start), todayISO);
+    row.append(when, name, day);
+    panel.appendChild(row);
+  });
+}
+
+// Where a missed session should move to: the day after the slot it missed, never
+// in the past and never later than the homework is actually due.
+function rescheduleDateFor(ev) {
+  const todayISO = homeworkFilters.todayISO || formatISODate(new Date()) || '';
+  const sessionISO = formatISODate(ev.start) || todayISO;
+  let candidate = addDaysISO(sessionISO, 1) || todayISO;
+  if (ev.dueDate && candidate > ev.dueDate) candidate = ev.dueDate;
+  if (todayISO && candidate < todayISO) candidate = todayISO;
+  return candidate;
+}
+
+function clockValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '18:00';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+// Sessions whose slot has passed and that were never marked done. Answering "Not
+// yet" moves the session on instead of silently leaving a hole in the plan.
+function renderCheckInRows(panel, events, sessionStates) {
+  if (!panel) return;
+  panel.innerHTML = '';
+  const now = new Date();
+  const todayISO = homeworkFilters.todayISO || formatISODate(now) || '';
+  const states = normalizeStudySessions(sessionStates);
+  const missed = (events || [])
+    .filter((ev) => ev && ev.kind !== 'rec' && ev.id && ev.end instanceof Date && ev.end < now)
+    .filter((ev) => (states[ev.id] || {}).status !== 'completed')
+    .sort((a, b) => a.start - b.start)
+    .slice(0, 3);
+  if (!missed.length) return;
+
+  const title = document.createElement('div');
+  title.className = 'hw-subjects-title';
+  title.textContent = t('ciTitle');
+  panel.appendChild(title);
+
+  missed.forEach((ev) => {
+    const row = document.createElement('div');
+    row.className = 'hw-checkin-row';
+    const name = document.createElement('span');
+    name.className = 'hw-checkin-name';
+    name.textContent = ev.subject || ev.title || '';
+    const when = document.createElement('span');
+    when.className = 'hw-checkin-when';
+    when.textContent = `${relativeDueLabel(formatISODate(ev.start), todayISO)} ${formatClock(ev.start)}`;
+    const actions = document.createElement('div');
+    actions.className = 'hw-checkin-actions';
+
+    const yes = document.createElement('button');
+    yes.type = 'button';
+    yes.className = 'hw-checkin-btn is-yes';
+    yes.textContent = t('ciYes');
+    yes.addEventListener('click', () => {
+      persistStudySession(ev.id, {
+        status: 'completed',
+        startedAt: null,
+        completedAt: new Date().toISOString(),
+        elapsedSeconds: Math.max(60, (parseInt(ev.minutes, 10) || 30) * 60)
+      }, () => {
+        showToast(t('sessionCompleted'), 'success');
+        loadAll();
+      });
+    });
+
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.className = 'hw-checkin-btn';
+    no.textContent = t('ciNo');
+    no.addEventListener('click', () => {
+      const date = rescheduleDateFor(ev);
+      savePlanOverride(ev.id, date, clockValue(ev.start), parseInt(ev.minutes, 10) || 30, ev.title || '', () => {
+        loadAll();
+      });
+    });
+
+    actions.append(yes, no);
+    row.append(name, when, actions);
+    panel.appendChild(row);
+  });
+}
+
+// Prefers the worker's scheduled plan so the times match the Calendar tab
+// exactly, including manual drag/drop overrides.
+function refreshSchedulePanels() {
+  const panels = homeworkSchedulePanels;
+  if (!panels || !panels.upNext || !panels.upNext.isConnected) return;
+  loadSchedulePanels(panels.upNext, panels.checkIn);
+}
+
+function loadSchedulePanels(upNextPanel, checkInPanel) {
+  const fallback = () => {
+    localGet({ pronoteItems: [], recurringEvents: [] }, (res) => {
+      const items = res.pronoteItems || [];
+      const recurring = res.recurringEvents || [];
+      const thisWeek = startOfWeek(new Date());
+      const nextWeek = new Date(thisWeek); nextWeek.setDate(nextWeek.getDate() + 7);
+      const events = buildWeekEvents(thisWeek, items, recurring)
+        .concat(buildWeekEvents(nextWeek, items, recurring));
+      renderUpNextRows(upNextPanel, events);
+      // Locally built events carry no plan id, so there is nothing a check-in
+      // could safely mark done or move. Leave that panel empty.
+    });
+  };
+  try {
+    chrome.runtime.sendMessage({ type: 'GET_LOCAL_SCHEDULE' }, (resp) => {
+      if (chrome.runtime.lastError || !resp || !resp.ok || !Array.isArray(resp.events)) {
+        fallback();
+        return;
+      }
+      const events = resp.events.map((ev) => {
+        const st = ev.startDateTime ? new Date(ev.startDateTime) : null;
+        const minutes = parseInt(ev.minutes, 10) || 30;
+        const en = ev.endDateTime
+          ? new Date(ev.endDateTime)
+          : (st ? new Date(st.getTime() + minutes * 60000) : null);
+        const info = parsePlanId(ev.id || '');
+        return {
+          start: st,
+          end: en,
+          id: ev.id || '',
+          minutes,
+          title: ev.title || '',
+          subject: (info && info.subject) || '',
+          dueDate: (info && info.dueDate) || ev.date || '',
+          kind: ev.pronoteKey && String(ev.pronoteKey).startsWith('rec-') ? 'rec' : 'hw'
+        };
+      }).filter((ev) => ev.start && ev.end && !Number.isNaN(ev.start.getTime()));
+      renderUpNextRows(upNextPanel, events);
+      localGet({ [STUDY_SESSIONS_KEY]: {} }, (stored) => {
+        renderCheckInRows(checkInPanel, events, stored[STUDY_SESSIONS_KEY]);
+      });
+    });
+  } catch {
+    fallback();
+  }
+}
+
+function addDaysISO(iso, days) {
+  const base = parseISODateLocal(iso);
+  if (!base) return '';
+  base.setDate(base.getDate() + days);
+  return formatISODate(base) || '';
+}
+
+function relativeDueLabel(iso, todayISO) {
+  const due = parseISODateLocal(iso);
+  const today = parseISODateLocal(todayISO);
+  if (!due || !today) return String(iso || '');
+  const days = Math.round((due - today) / 86400000);
+  if (days === 0) return t('sumToday');
+  if (days === 1) return t('sumTomorrow');
+  if (days > 1) return `${t('sumInDays')} ${days} ${t('sumDays')}`;
+  return overviewColumnLabel(iso);
+}
+
+function makeKpiTile(labelKey, value, modifier) {
+  const tile = document.createElement('div');
+  tile.className = modifier ? `hw-kpi ${modifier}` : 'hw-kpi';
+  const label = document.createElement('span');
+  label.className = 'hw-kpi-label';
+  label.textContent = t(labelKey);
+  const val = document.createElement('span');
+  val.className = 'hw-kpi-value';
+  val.textContent = String(value);
+  tile.append(label, val);
+  return tile;
+}
+
+// Headline numbers for the homework page. Reads the same filtered set the grid
+// renders, so the summary always describes what is actually on screen.
+function renderHomeworkSummary(allItems, visibleItems) {
+  if (!$hwSummary) return;
+  $hwSummary.innerHTML = '';
+  const todayISO = homeworkFilters.todayISO;
+  const visible = (visibleItems || []).filter((it) => it && it.dueDate && !it.isReminder);
+  if (!todayISO || !visible.length) return;
+
+  const tomorrowISO = addDaysISO(todayISO, 1);
+  const weekISO = addDaysISO(todayISO, 7);
+  const countWhere = (fn) => visible.filter(fn).length;
+  const dueToday = countWhere((it) => it.dueDate === todayISO);
+  const dueTomorrow = countWhere((it) => tomorrowISO && it.dueDate === tomorrowISO);
+  const thisWeek = countWhere((it) => weekISO && it.dueDate >= todayISO && it.dueDate <= weekISO);
+  const tests = countWhere((it) => resolveItemKind(it) === 'test');
+  const hiddenPast = homeworkFilters.showPast
+    ? 0
+    : (allItems || []).filter((it) => it && it.dueDate && String(it.dueDate) < todayISO).length;
+  const totalMinutes = visible.reduce((sum, it) => sum + (getEstimatedMinutes(it) || 0), 0);
+  const next = visible
+    .slice()
+    .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)) || priorityScoreOf(b) - priorityScoreOf(a))[0];
+
+  const hero = document.createElement('div');
+  hero.className = 'hw-hero';
+  const heroValue = document.createElement('div');
+  heroValue.className = 'hw-hero-value';
+  heroValue.textContent = String(visible.length);
+  const heroLabel = document.createElement('div');
+  heroLabel.className = 'hw-hero-label';
+  heroLabel.textContent = t('sumUpcoming');
+  hero.append(heroValue, heroLabel);
+  const sub = document.createElement('div');
+  sub.className = 'hw-hero-sub';
+  if (totalMinutes > 0) {
+    const line = document.createElement('div');
+    line.textContent = `${formatDuration(totalMinutes)} ${t('sumStudyPlanned')}`;
+    sub.appendChild(line);
+  }
+  if (next) {
+    const line = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = next.subject || '';
+    line.append(document.createTextNode(`${t('sumNextUp')} `), name);
+    const when = relativeDueLabel(next.dueDate, todayISO);
+    if (when) line.appendChild(document.createTextNode(` · ${when}`));
+    sub.appendChild(line);
+  }
+  hero.appendChild(sub);
+
+  const panels = document.createElement('div');
+  panels.className = 'hw-panels';
+  const checkIn = document.createElement('div');
+  checkIn.className = 'hw-checkin';
+  panels.appendChild(checkIn);
+  const upNext = document.createElement('div');
+  upNext.className = 'hw-upnext';
+  panels.appendChild(upNext);
+  homeworkSchedulePanels = { upNext, checkIn };
+  loadSchedulePanels(upNext, checkIn);
+  const kpis = document.createElement('div');
+  kpis.className = 'hw-kpis';
+  kpis.appendChild(makeKpiTile('sumDueToday', dueToday, dueToday > 0 ? 'is-urgent' : ''));
+  kpis.appendChild(makeKpiTile('sumDueTomorrow', dueTomorrow, ''));
+  kpis.appendChild(makeKpiTile('sumNext7', thisWeek, ''));
+  kpis.appendChild(makeKpiTile('sumTests', tests, ''));
+  if (hiddenPast > 0) kpis.appendChild(makeKpiTile('sumPastHidden', hiddenPast, 'is-muted'));
+  panels.appendChild(kpis);
+
+  const bySubject = new Map();
+  for (const it of visible) {
+    const name = String(it.subject || '').trim() || '-';
+    bySubject.set(name, (bySubject.get(name) || 0) + 1);
+  }
+  const ranked = Array.from(bySubject.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  if (ranked.length) {
+    const box = document.createElement('div');
+    box.className = 'hw-subjects';
+    const title = document.createElement('div');
+    title.className = 'hw-subjects-title';
+    title.textContent = t('sumSubjects');
+    box.appendChild(title);
+    const top = ranked.slice(0, 6);
+    const max = top[0][1] || 1;
+    for (const [name, count] of top) {
+      const row = document.createElement('div');
+      row.className = 'hw-subject-row';
+      const fill = document.createElement('div');
+      fill.className = 'hw-subject-fill';
+      fill.style.width = `${Math.max(6, Math.round((count / max) * 100))}%`;
+      const label = document.createElement('span');
+      label.className = 'hw-subject-name';
+      label.textContent = name;
+      const value = document.createElement('span');
+      value.className = 'hw-subject-count';
+      value.textContent = String(count);
+      row.append(fill, label, value);
+      box.appendChild(row);
+    }
+    if (ranked.length > top.length) {
+      const more = document.createElement('div');
+      more.className = 'hw-subject-more';
+      more.textContent = `+${ranked.length - top.length} ${t('sumMore')}`;
+      box.appendChild(more);
+    }
+    panels.appendChild(box);
+  }
+
+  $hwSummary.append(hero, panels);
+}
+
 function renderOverviewList(items) {
   if (!$overview) return;
   readHomeworkFilters();
@@ -2155,26 +2545,34 @@ function renderOverviewList(items) {
   const src = raw
     .map((it, idx) => (it && typeof it === 'object') ? { ...it, _sourceIndex: idx } : it)
     .filter(itemMatchesFilters);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const cols = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+  renderHomeworkSummary(raw, src);
+  // One column per due date. Bucketing by weekday instead would stack every
+  // Tuesday of the year into a single column.
+  const cols = new Map();
   src.forEach((it, idx) => {
     if (!it || !it.dueDate) return;
     try {
       const [y, m, d] = it.dueDate.split('-').map((v) => parseInt(v, 10));
       const dt = new Date(y, m - 1, d); dt.setHours(0, 0, 0, 0);
-      const wd = dt.getDay();
+      if (Number.isNaN(dt.getTime())) return;
       const sourceIndex = Number.isFinite(it._sourceIndex) ? it._sourceIndex : idx;
-      if (cols[wd]) cols[wd].push({ ...it, _dt: dt, _index: sourceIndex });
+      if (!cols.has(it.dueDate)) cols.set(it.dueDate, []);
+      cols.get(it.dueDate).push({ ...it, _index: sourceIndex });
     } catch (e) { logStorageError('renderOverviewList-date-parse', e); }
   });
-  Object.values(cols).forEach(arr => arr.sort((a, b) => a._dt - b._dt || String(a.subject || '').localeCompare(b.subject || '')));
-  const total = Object.values(cols).reduce((s, a) => s + a.length, 0);
+  cols.forEach(arr => arr.sort((a, b) => String(a.subject || '').localeCompare(b.subject || '')));
+  let total = 0;
+  cols.forEach(arr => { total += arr.length; });
   if (!total) {
     $overview.className = 'day';
     $overview.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = hasActiveHomeworkFilters() ? t('filterEmpty') : 'No upcoming homework stored yet.';
+    const hiddenPast = !homeworkFilters.showPast && homeworkFilters.todayISO &&
+      raw.some((it) => it && it.dueDate && String(it.dueDate) < homeworkFilters.todayISO);
+    empty.textContent = hasActiveHomeworkFilters() ? t('filterEmpty')
+      : hiddenPast ? t('emptyPastHidden')
+        : 'No upcoming homework stored yet.';
     $overview.appendChild(empty);
     return;
   }
@@ -2212,15 +2610,16 @@ function renderOverviewList(items) {
       });
     });
   }
-  const dayOrder = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun
+  const dayOrder = Array.from(cols.keys()).sort(); // ISO strings sort chronologically
   for (const k of dayOrder) {
+    const dayItems = cols.get(k) || [];
     const sec = document.createElement('div'); sec.className = 'col';
     const header = document.createElement('div'); header.className = 'col-header';
-    const title = document.createElement('div'); title.className = 'col-title'; title.textContent = dayLabel(k);
-    const count = document.createElement('div'); count.className = 'count-badge'; count.textContent = cols[k].length + ' item(s)';
+    const title = document.createElement('div'); title.className = 'col-title'; title.textContent = overviewColumnLabel(k);
+    const count = document.createElement('div'); count.className = 'count-badge'; count.textContent = dayItems.length + ' item(s)';
     header.append(title, count);
     const list = document.createElement('div'); list.className = 'items';
-    for (const it of cols[k]) {
+    for (const it of dayItems) {
       const card = document.createElement('div'); card.className = 'item'; card.dataset.index = String(it._index);
       const top = document.createElement('div'); top.className = 'item-top';
       const subj = document.createElement('div'); subj.className = 'subject'; subj.textContent = it.subject || '';
@@ -2259,11 +2658,7 @@ function renderOverviewList(items) {
         diffSelect.value = it.difficulty || 'medium';
         diffSelect.addEventListener('change', () => updatePronoteItem(it._index, { difficulty: diffSelect.value }));
         diffWrap.append(diffLabel, diffSelect);
-        const score = priorityScoreOf(it);
-        const priorityBadge = document.createElement('span');
-        priorityBadge.className = 'priority-badge';
-        priorityBadge.textContent = `${t('priorityLabel')} ${score}`;
-        meta.append(typeBadge, diffWrap, priorityBadge);
+        meta.append(typeBadge, diffWrap);
       }
       const notes = document.createElement('div'); notes.className = 'notes'; if (it.notes) notes.textContent = it.notes.slice(0, 240);
       card.append(top, meta, notes);
@@ -2535,7 +2930,7 @@ function resolveHomeworkOverlaps(events) {
   return out.sort((a, b) => a.start - b.start || a.end - b.end || String(a.title || '').localeCompare(b.title || ''));
 }
 
-function savePlanOverride(id, date, time, minutes, title) {
+function savePlanOverride(id, date, time, minutes, title, done) {
   if (!id) return;
   localGet({ [PLAN_OVERRIDES_KEY]: {} }, (res) => {
     const overrides = { ...(res[PLAN_OVERRIDES_KEY] || {}) };
@@ -2544,6 +2939,7 @@ function savePlanOverride(id, date, time, minutes, title) {
       renderCalendar();
       showToast(formatTemplate(t('planMoved'), { title: title || t('studySession'), date, time }), 'success');
       triggerGcalSync();
+      if (typeof done === 'function') done();
     });
   });
 }
@@ -3056,12 +3452,6 @@ function renderCalendarGrid(events, weekStart) {
       meta.className = 'cal-slot-meta';
       meta.textContent = ev.meta || '';
       slot.append(title, meta);
-      if (slotKind === 'hw' && priorityScore > 0) {
-        const priorityBadge = document.createElement('div');
-        priorityBadge.className = 'priority-badge';
-        priorityBadge.textContent = `${t('priorityLabel')} ${priorityScore}`;
-        slot.appendChild(priorityBadge);
-      }
       if (warnings.length) {
         const warning = document.createElement('div');
         warning.className = 'cal-slot-warning';
@@ -3364,11 +3754,11 @@ $uiLanguage?.addEventListener('change', () => {
   setLanguage(lang);
 });
 
-$studyPageButton?.addEventListener('click', () => { window.location.href = chrome.runtime.getURL('study_durations.html'); });
+$settingsPageButton?.addEventListener('click', () => { window.location.href = chrome.runtime.getURL('settings.html'); });
 $techniqueBack?.addEventListener('click', () => {
   renderTechniquesList();
 });
-[$homeworkFilterQuery, $homeworkFilterType, $homeworkFilterDifficulty, $homeworkFilterDate].forEach((el) => {
+[$homeworkFilterQuery, $homeworkFilterType, $homeworkFilterDifficulty, $homeworkFilterDate, $homeworkFilterPast].forEach((el) => {
   el?.addEventListener(el === $homeworkFilterQuery ? 'input' : 'change', () => {
     readHomeworkFilters();
     scheduleStorageRefresh(() => loadAll(), 80);
@@ -3476,6 +3866,7 @@ $calNext?.addEventListener('click', () => { calWeekStart.setDate(calWeekStart.ge
           scheduleStorageRefresh(() => {
             renderCalendar();
             loadRecurring();
+            refreshSchedulePanels();
           }, 60);
         } else if (needsDeletedReload && $deletedModal && !$deletedModal.classList.contains('hidden')) {
           localGet({ pronoteDeletedItems: [] }, (res) => {

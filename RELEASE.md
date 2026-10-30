@@ -33,6 +33,8 @@ Use this before uploading a new Chrome Web Store package.
 
 - Open a real PRONOTE student page.
 - Confirm the extension captures homework without downloading scanner junk files.
+- Watch the Downloads folder through a full session: nothing should appear except files you
+  explicitly exported (`.ics` export, JSON backup).
 - Confirm homework appears in the popup and Options overview.
 - Confirm Calendar study sessions are generated from the captured items.
 - Confirm the settings page diagnostics panel shows the latest scan time, source, and item count.

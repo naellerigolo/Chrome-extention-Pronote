@@ -312,7 +312,7 @@
         const sendCapture = (tabId) => {
           if (!tabId) return;
           chrome.tabs.sendMessage(tabId, { type: 'PRONOTE_SET_REPLACE_MODE' }, () => { void chrome.runtime.lastError; });
-          chrome.tabs.sendMessage(tabId, { type: 'PRONOTE_FORCE_CAPTURE', skipDownloads: true }, () => { void chrome.runtime.lastError; });
+          chrome.tabs.sendMessage(tabId, { type: 'PRONOTE_FORCE_CAPTURE' }, () => { void chrome.runtime.lastError; });
         };
         const sendWhenReady = (tabId) => {
           if (!tabId) return;

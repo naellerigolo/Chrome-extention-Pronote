@@ -3,10 +3,6 @@
   const STABILITY_MS = 900;
   const MAX_WAIT_MS = 25000;
   const EXTRA_SETTLE_MS = 300;
-  const defaultStudyDurations = {
-    homework: { easy: 25, medium: 45, hard: 75 },
-    test: { easy: 30, medium: 60, hard: 90 }
-  };
   const MAX_STORED_ITEMS = 1200;
 
   const navEventName = "pronote-locationchange";
@@ -19,7 +15,6 @@
   })();
 
   let allowAutoCapture = true; // Auto-capture on load by default
-  let skipDownloads = false;
 
   // Auto-run on initial load
   runAutoCapture();
@@ -49,7 +44,6 @@
       }
       if (msg.type === 'PRONOTE_FORCE_CAPTURE') {
         // Arm capture for a short window and run after a brief delay
-        skipDownloads = !!msg.skipDownloads;
         try { window.__PRONOTE_FORCE_SCAN = true; } catch { }
         allowAutoCapture = true;
         setTimeout(() => { allowAutoCapture = false; }, 60000);
@@ -111,7 +105,6 @@
 
     const iframeSeen = new Set();
     const pendingIframes = new Set();
-    const crossOriginIframes = new Set();
 
     window.addEventListener("beforeunload", () => { if (!resolved) finalize(); }, { once: true });
 
@@ -144,11 +137,6 @@
             pendingIframes.add(f);
             f.addEventListener("load", () => { pendingIframes.delete(f); scheduleStableCheck(); }, { once: true });
           }
-        } else {
-          let url = f.src || "";
-          if (!url && f.getAttribute("srcdoc")) url = "about:srcdoc";
-          if (!url) url = "about:blank";
-          crossOriginIframes.add(url);
         }
       }
     }
@@ -278,93 +266,6 @@
         lastN = n;
       }
       return cleaned;
-    }
-
-    function homeworkOnlyText(cross) {
-      let chunk = findHomeworkSlice(visibleLinesFromDoc(document));
-      if (chunk.length < 3) {
-        for (const d of sameOriginIframeDocs()) {
-          const sliced = findHomeworkSlice(visibleLinesFromDoc(d));
-          if (sliced.length >= 3) { chunk = sliced; break; }
-        }
-      }
-
-      // Helpers for formatting text output in groups
-      const nrmTxt = (s) => (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
-      const isDueHeading = (line) => {
-        const n = nrmTxt(line).replace(/[.!:]+$/, "");
-        if (!n) return false;
-        if (n === "aujourdhui" || n === "demain" || n === "apres demain" || n === "apres-demain") return true;
-        if (/^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/.test(n)) return true;
-        return false;
-      };
-      const isSubjectLike = (line) => {
-        const t = (line || "").trim(); if (!t) return false;
-        if (/https?:\/\//i.test(t)) return false;
-        if (isKnownSubjectName(t)) return true;
-        // Known subject cues
-        if (/^(SPE|SPÉ|FRANCAIS|FRANÇAIS|ANGLAIS|EPS|HISTOIRE|GEOGRAPHIE|GÉOGRAPHIE|ESPAGNOL|ARABE|NSI|PHYSIQUE|CHIMIE|LV\d)/i.test(t)) return true;
-        // Uppercase ratio heuristic
-        const letters = (t.match(/[\p{L}]/gu) || []).length;
-        const upp = (t.match(/[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸ]/g) || []).length;
-        const ratio = letters ? (upp / letters) : 0;
-        if (ratio >= 0.5 && t.length <= 70) return true;
-        // Trailing colon typical header
-        if (/^[\p{L}\s\-]+:$/u.test(t)) return true;
-        return false;
-      };
-
-      function formatChunk(lines) {
-        const out = [];
-        let i = 0;
-        let seenAnyInSection = false;
-        while (i < lines.length) {
-          const raw = (lines[i] || "").trim();
-          const n = nrmTxt(raw);
-          if (!raw) { i++; continue; }
-          // Drop standalone 'Pour' markers in text output
-          if (n === "pour") { i++; continue; }
-          if (isDueHeading(raw)) {
-            if (out.length && out[out.length - 1] !== "") out.push("");
-            out.push(raw);
-            out.push(""); // blank line after date heading
-            seenAnyInSection = false;
-            i++; continue;
-          }
-          if (isSubjectLike(raw)) {
-            if (seenAnyInSection) out.push(""); // blank line between subjects
-            out.push(raw);
-            i++;
-            // Append following note lines until next subject/due
-            while (i < lines.length) {
-              const nxt = (lines[i] || "").trim();
-              const nn = nrmTxt(nxt);
-              if (!nxt) { i++; continue; }
-              if (nn === "pour" || isDueHeading(nxt) || isSubjectLike(nxt)) break;
-              out.push(nxt);
-              i++;
-            }
-            seenAnyInSection = true;
-            continue;
-          }
-          // Fallback: just append
-          out.push(raw);
-          i++;
-        }
-        // Trim trailing blanks
-        while (out.length && out[out.length - 1] === "") out.pop();
-        return out;
-      }
-
-      const formatted = chunk.length ? formatChunk(chunk) : [];
-      const x = Array.from(cross);
-      const header = [
-        `Source: ${location.href}`,
-        `Collected: ${new Date().toISOString()}`,
-        x.length ? `Cross-Origin Iframes: ${x.join(" | ")}` : `Cross-Origin Iframes: none`,
-        ""
-      ].join("\n");
-      return header + (formatted.length ? formatted.join("\n") : "[Aucun bloc 'Travail à faire' détecté]");
     }
 
     function parseHomeworkJSON(lines) {
@@ -618,173 +519,6 @@
       }
       return items;
     }
-
-    function pad(n) { return String(n).padStart(2, "0"); }
-    function dateFromISO(iso) { const [y, m, d] = iso.split("-").map(v => parseInt(v, 10)); return new Date(y, m - 1, d); }
-    function isoFromDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
-
-    function makeStudyPlan(items, studyDurations) {
-      // Build simple study sessions leading up to each due date
-      const sessions = [];
-      const today = new Date(); const todayISO = isoFromDate(today);
-      const buildDatesFromOffsets = (due, dueISO, offsets) => {
-        const start = new Date(); start.setHours(0, 0, 0, 0);
-        const seen = new Set();
-        const out = [];
-        for (const off of (offsets || [])) {
-          const d = new Date(due); d.setDate(d.getDate() - off);
-          if (isoFromDate(d) < todayISO) d.setTime(start.getTime());
-          const iso = isoFromDate(d);
-          if (iso >= dueISO) continue;
-          if (seen.has(iso)) continue;
-          seen.add(iso);
-          out.push(iso);
-        }
-        return out.sort();
-      };
-      const clampSessionCount = (it) => {
-        const raw = parseInt(it?.sessionCount, 10);
-        if (!Number.isFinite(raw) || raw <= 0) return null;
-        return Math.min(6, Math.max(1, raw));
-      };
-      const resolveDifficulty = (value) => {
-        const text = String(value || '').toLowerCase();
-        return text === 'easy' || text === 'hard' ? text : 'medium';
-      };
-      const getMinutes = (it) => {
-        const type = (it.type === 'test' || it.type === 'both') ? 'test' : 'homework';
-        const diff = resolveDifficulty(it.difficulty);
-        const source = studyDurations && studyDurations[type] ? studyDurations[type] : defaultStudyDurations[type];
-        const fallback = defaultStudyDurations[type][diff] || defaultStudyDurations[type].medium;
-        if (source && typeof source[diff] === 'number' && source[diff] > 0) return source[diff];
-        return fallback;
-      };
-
-      for (const it of (items || [])) {
-        if (!it || !it.dueDate) continue;
-        const due = dateFromISO(it.dueDate);
-        const dueISO = isoFromDate(due);
-        const notesLen = (it.notes || "").length;
-        const kind = (it.type === 'both') ? 'test' : it.type;
-        const manual = parseInt(it.manualMinutes, 10);
-        const minutes = Number.isFinite(manual) && manual > 0 ? manual : getMinutes(it);
-        const sessionCount = clampSessionCount(it);
-        const prefix = 'Study';
-
-        if (kind === "test") {
-          const count = sessionCount || 4;
-          const offsets = Array.from({ length: count }, (_, i) => count - i);
-          const dates = buildDatesFromOffsets(due, dueISO, offsets);
-          for (let idx = 0; idx < dates.length; idx++) {
-            sessions.push({
-              date: dates[idx],
-              minutes,
-              kind: 'test',
-              title: `${prefix} ${it.subject || ""} (${idx + 1}/${dates.length})`.trim(),
-              notes: `Prep ${it.subject || ""} for ${dueISO}. ${(it.notes || '').slice(0, 160)}`
-            });
-          }
-        } else {
-          let offsets;
-          if (sessionCount) offsets = Array.from({ length: sessionCount }, (_, i) => sessionCount - i);
-          else if (notesLen > 140) offsets = [3, 2, 1];
-          else if (notesLen > 80) offsets = [2, 1];
-          else offsets = [1];
-          const dates = buildDatesFromOffsets(due, dueISO, offsets);
-          for (let idx = 0; idx < dates.length; idx++) {
-            sessions.push({
-              date: dates[idx],
-              minutes,
-              kind: 'homework',
-              title: `${prefix} ${it.subject || ""} (${idx + 1}/${dates.length})`.trim(),
-              notes: `Finish ${it.subject || ""} for ${dueISO}. ${(it.notes || '').slice(0, 160)}`
-            });
-          }
-        }
-      }
-      sessions.sort((a, b) => a.date.localeCompare(b.date) || (a.title || '').localeCompare(b.title || ''));
-      return sessions;
-    }
-
-    function toCSV(rows) {
-      const esc = s => `"${String(s || "").replace(/"/g, '""')}"`;
-      const out = [["Date", "Title", "Minutes", "Notes"]]
-        .concat(rows.map(r => [r.date, r.title, r.minutes, r.notes]))
-          .map(r => r.map(esc).join(","))
-          .join("\n");
-        return out;
-      }
-
-      function toICS(rows, studyWindows) {
-        // Create non-overlapping events by stacking sessions per day
-        const pad = (n) => String(n).padStart(2, '0');
-        const dtStamp = new Date();
-        const dtStampStr = `${dtStamp.getUTCFullYear()}${pad(dtStamp.getUTCMonth() + 1)}${pad(dtStamp.getUTCDate())}T${pad(dtStamp.getUTCHours())}${pad(dtStamp.getUTCMinutes())}${pad(dtStamp.getUTCSeconds())}Z`;
-        const escText = (s) => String(s || "").replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
-        const lines = [
-          'BEGIN:VCALENDAR',
-          'VERSION:2.0',
-          'PRODID:-//PRONOTE Auto Study Plan//EN'
-        ];
-        const dayStartHour = 18; // fallback start when no windows
-        const gapMinutes = 5;    // small gap between sessions
-        const byDate = new Map();
-        for (const r of rows) {
-          if (!r || !r.date) continue;
-          if (!byDate.has(r.date)) byDate.set(r.date, []);
-          byDate.get(r.date).push(r);
-        }
-
-        const fmtLocal = (dt) => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-        const priority = (s) => (s && s.kind === 'test') ? 0 : 1; // tests first
-        const parseHM = (t) => { const [H, M] = String(t || '').split(':').map(x => parseInt(x, 10) || 0); return H * 60 + M; };
-        const minutesToDate = (y, m, d, total) => new Date(y, m - 1, d, Math.floor(total / 60), total % 60, 0);
-
-        let uidCounter = 0;
-        const sortedDates = Array.from(byDate.keys()).sort();
-        for (const date of sortedDates) {
-          const sessions = byDate.get(date).slice().sort((a, b) => priority(a) - priority(b) || (a.title || '').localeCompare(b.title || ''));
-          const [y, m, d] = date.split('-').map(x => parseInt(x, 10));
-          const weekday = (new Date(y, m - 1, d)).getDay();
-          const wins = (studyWindows && studyWindows[String(weekday)] || []).map(w => ({ start: parseHM(w.start), end: parseHM(w.end) })).sort((a, b) => a.start - b.start);
-          let winIdx = 0;
-          let cursorMin = wins.length ? wins[0].start : dayStartHour * 60;
-
-          for (const s of sessions) {
-            const mins = parseInt(s.minutes, 10) || 0;
-            if (wins.length) {
-              while (winIdx < wins.length && cursorMin > wins[winIdx].end) winIdx++;
-              if (winIdx >= wins.length) {
-                // No more windows today: place sequentially after last window
-                cursorMin = wins[wins.length - 1].end + gapMinutes;
-              } else if (cursorMin < wins[winIdx].start) {
-                cursorMin = wins[winIdx].start;
-              }
-              while (winIdx < wins.length && (cursorMin + mins) > wins[winIdx].end) {
-                winIdx++;
-                if (winIdx < wins.length) cursorMin = Math.max(cursorMin, wins[winIdx].start);
-              }
-              if (winIdx >= wins.length) {
-                cursorMin = wins[wins.length - 1].end + gapMinutes;
-              }
-            }
-            const start = minutesToDate(y, m, d, cursorMin);
-            const end = minutesToDate(y, m, d, cursorMin + mins);
-            cursorMin += mins + gapMinutes;
-            const uid = `${y}${pad(m)}${pad(d)}-${uidCounter++}-${simpleHash(String(s.title || ''))}@pronote-studyplan`;
-            lines.push('BEGIN:VEVENT');
-            lines.push(`DTSTAMP:${dtStampStr}`);
-            lines.push(`DTSTART:${fmtLocal(start)}`);
-            lines.push(`DTEND:${fmtLocal(end)}`);
-            lines.push(`SUMMARY:${escText(s.title)}`);
-            lines.push(`DESCRIPTION:${escText(s.notes || '')}`);
-            lines.push(`UID:${uid}`);
-            lines.push('END:VEVENT');
-          }
-        }
-        lines.push('END:VCALENDAR');
-        return lines.join('\n');
-      }
 
       function parseICSHomework(text) {
         try {
@@ -1101,24 +835,6 @@
         return cleaned;
       }
 
-      function simpleHash(text) {
-        const src = String(text || '');
-        let h = 0;
-        for (let i = 0; i < src.length; i++) h = Math.imul(31, h) + src.charCodeAt(i) | 0;
-        return Math.abs(h);
-      }
-
-      function ts() {
-        const p = (n) => String(n).padStart(2, "0");
-        const d = new Date();
-        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
-      }
-
-      function baseName() {
-        const host = location.hostname.replace(/[^a-zA-Z0-9.-]/g, "_");
-        return `pronote_${host}_${ts()}`;
-      }
-
       async function finalize() {
         if (resolved) return;
         resolved = true;
@@ -1128,8 +844,7 @@
         try { console.info('[PRONOTE planner] Finalizing...'); } catch { }
         try { window.__PRONOTE_finalize = undefined; } catch { }
 
-        const textHw = homeworkOnlyText(crossOriginIframes);
-        // Parse items directly from the same chunk we used to build TXT
+        // Parse items from the visible homework chunk.
         let chunk = findHomeworkSlice(visibleLinesFromDoc(document));
         if (chunk.length < 3) {
           for (const d of sameOriginIframeDocs()) {
@@ -1323,51 +1038,14 @@
         if (window.__PRONOTE_REPLACE_MODE) toast('Homework replaced');
         else if (addedCount > 0) toast(`Added ${addedCount} new homework`);
         const homeworkJson = JSON.stringify({ source: location.href, collectedAt: new Date().toISOString(), items: mergedItems }, null, 2);
-        const base = baseName();
-        const stableBaseName = `pronote_${location.hostname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
         try {
-          chrome.storage.sync.get({ studyWindows: null, studyDurations: defaultStudyDurations }, (res) => {
-            const durations = (res && res.studyDurations) || defaultStudyDurations;
-            const plan = makeStudyPlan(mergedItems, durations);
-            const studyPlanCsv = toCSV(plan);
-            const studyPlanIcs = toICS(plan, res && res.studyWindows);
-            try {
-              chrome.runtime.sendMessage({
-                type: "PRONOTE_SNAPSHOT_READY",
-                skipDownloads,
-                textHw,
-                homeworkJson,
-                studyPlanCsv,
-                studyPlanIcs,
-                baseName: base,
-                stableBaseName
-              }, () => { });
-              skipDownloads = false;
-            } catch { }
-            allowAutoCapture = false;
-            window.__PRONOTE_REPLACE_MODE = false;
-          });
-        } catch {
-          const plan = makeStudyPlan(mergedItems, defaultStudyDurations);
-          const studyPlanCsv = toCSV(plan);
-          const studyPlanIcs = toICS(plan, null);
-          try {
-            chrome.runtime.sendMessage({
-              type: "PRONOTE_SNAPSHOT_READY",
-              skipDownloads,
-              textHw,
-              homeworkJson,
-              studyPlanCsv,
-              studyPlanIcs,
-              baseName: base,
-              stableBaseName
-            }, () => { });
-            skipDownloads = false;
-          } catch { }
-          allowAutoCapture = false;
-          window.__PRONOTE_REPLACE_MODE = false;
-        }
+          chrome.runtime.sendMessage({
+            type: "PRONOTE_SNAPSHOT_READY",
+            homeworkJson
+          }, () => { });
+        } catch { }
+        allowAutoCapture = false;
+        window.__PRONOTE_REPLACE_MODE = false;
       }
       try { window.__PRONOTE_finalize = finalize; } catch { }
     }

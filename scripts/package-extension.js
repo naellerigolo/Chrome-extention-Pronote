@@ -21,8 +21,8 @@ const entries = [
   "popup.js",
   "options.html",
   "options.js",
-  "study_durations.html",
-  "study_durations.js",
+  "settings.html",
+  "settings.js",
   "Icon",
   "PRIVACY.md",
   "FUNCTIONS.md"
@@ -37,7 +37,10 @@ if (missing.length) {
 fs.mkdirSync(distDir, { recursive: true });
 fs.rmSync(outFile, { force: true });
 
-const zip = spawnSync("zip", ["-r", outFile, ...entries], {
+// Assets that live in Icon/ but are not referenced by any page.
+const excludes = ["Icon/Google_Chrome_Pronote.png"];
+
+const zip = spawnSync("zip", ["-r", outFile, ...entries, "-x", ...excludes], {
   cwd: root,
   stdio: "inherit"
 });

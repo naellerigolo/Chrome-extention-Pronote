@@ -18,8 +18,8 @@ const requiredFiles = [
   "popup.js",
   "options.html",
   "options.js",
-  "study_durations.html",
-  "study_durations.js",
+  "settings.html",
+  "settings.js",
   "PRIVACY.md",
   "FUNCTIONS.md",
   "RELEASE.md",
@@ -89,8 +89,8 @@ const scannedFiles = [
   "popup.js",
   "scanner.js",
   "click_capture.js",
-  "study_durations.html",
-  "study_durations.js"
+  "settings.html",
+  "settings.js"
 ];
 
 for (const file of scannedFiles) {

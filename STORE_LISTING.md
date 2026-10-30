@@ -29,8 +29,8 @@ Key features:
 
 - `storage`: saves homework, reminders, preferences, study progress, and calendar overrides.
 - `unlimitedStorage`: avoids data loss for students with many captured homework items and backup metadata.
-- `downloads`: downloads `.ics` calendar exports and JSON backups.
-- `tabs`: opens PRONOTE, Google Calendar, and extension pages from the popup and notifications.
+- `downloads`: writes `.ics` calendar exports and JSON backups, each on an explicit user click.
+- `tabs`: reads the URL of updated tabs so the scanner is only triggered on PRONOTE pages.
 - `alarms`: schedules background refresh and due-tomorrow notification checks.
 - `notifications`: shows due-tomorrow reminder notifications.
 - `identity`: signs in to Google only when the user enables Google Calendar sync.
@@ -58,7 +58,12 @@ Data sharing:
 Data storage:
 
 - Extension data is stored in Chrome extension storage on the user's browser.
-- Backups are downloaded only when the user clicks export.
+- Backups and `.ics` exports are downloaded only when the user clicks the matching button; no
+  background task writes files to disk.
+- The optional ICS feed import (off by default, and not exposed in the UI in this version)
+  reads a user-supplied calendar URL and merges the result into local storage. It uploads
+  nothing and, having no host permission for arbitrary domains, works only with feeds that
+  serve permissive CORS headers.
 
 Limited Use statement:
 

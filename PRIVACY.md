@@ -1,7 +1,7 @@
 PRONOTE Planner (Lite) - Privacy Policy
 ======================================
 
-Last updated: 2026-06-16
+Last updated: 2026-09-04
 
 Summary
 -------
@@ -12,6 +12,7 @@ Summary
 - Calendar export can download a local `.ics` file for non-Google calendar apps.
 - Due-tomorrow notifications can summarize stored homework/tests and reminders.
 - Click capture does not collect form fields, passwords, or typed content.
+- Files are written to your Downloads folder only when you click an export or backup button.
 
 Data Processed
 --------------
@@ -35,9 +36,11 @@ Data Processed
 - Behavior: the extension creates or reuses one dedicated calendar (`gcalCalendarId`) and syncs only extension-managed events using a private `pronoteKey`.
 - It does not scan, modify, or delete unrelated events in your primary/personal calendars.
 
-5) Calendar export
-- Purpose: download a local `.ics` file from stored homework, recurring events, and manual schedule overrides.
-- Storage/transport: generated locally through the browser downloads API.
+5) Calendar export and backups
+- Purpose: download a local `.ics` file from stored homework, recurring events, and manual
+  schedule overrides, or a JSON backup of extension settings and data.
+- Trigger: an explicit click in the planner or settings page. No background task writes files.
+- Storage/transport: generated locally through the browser downloads API; nothing is uploaded.
 
 6) Click/activity capture (optional)
 - Captured metadata: interaction kind, timestamp, current URL.
@@ -45,8 +48,15 @@ Data Processed
 - Purpose: trigger safer capture timing on PRONOTE pages.
 
 7) Optional ICS import
-- If enabled, the extension fetches your configured ICS URL and merges new homework locally.
-- ICS URL is stored in sync settings; downloaded/generated files stay on your device.
+- Disabled by default. There is no UI switch in this version: `icsEnabled` / `icsUrl` are only
+  set through a restored backup, so the feature is inactive for a normal install.
+- When enabled, the extension requests your configured ICS URL. This is the only outbound
+  request to a server that is neither PRONOTE nor Google, and the URL is one you supplied.
+- The request sends no homework, reminders, or account data - it is a plain read of the feed.
+- Parsed items are merged into `chrome.storage.local` only. The import writes no files to disk.
+- The ICS URL is stored in `chrome.storage.sync`.
+- Because the extension holds no host permission for arbitrary domains, the fetch succeeds only
+  for feeds that serve permissive CORS headers.
 
 Removed Tutor Cleanup
 ---------------------
