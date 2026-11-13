@@ -363,7 +363,9 @@
         if (res && res.ok) {
           setStatus('Signed in successfully');
         } else {
-          setStatus('Login failed', true);
+          const detail = res && res.error ? res.error : 'unknown error';
+          console.error('Login failed:', detail, res && res.extensionId ? `extension id: ${res.extensionId}` : '');
+          setStatus(`Login failed: ${detail}`, true);
         }
       });
     } catch (e) {

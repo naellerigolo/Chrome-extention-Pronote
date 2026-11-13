@@ -23,6 +23,7 @@ let autoSyncTimer = null;
 let autoSyncInFlight = false;
 let autoSyncDirty = false;
 let manualSyncInFlight = false;
+let lastAuthError = '';
 
 function toDataUrl(mime, text) {
   return `data:${mime};charset=utf-8,` + encodeURIComponent(text);
@@ -152,7 +153,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'GCAL_LOGIN') {
-    getTokenInteractive().then(t => sendResponse({ ok: !!t })).catch(() => sendResponse({ ok: false }));
+    getTokenInteractive()
+      .then(t => sendResponse(t
+        ? { ok: true }
+        : { ok: false, error: lastAuthError || 'Sign-in was cancelled', extensionId: EXTENSION_ID }))
+      .catch(e => sendResponse({ ok: false, error: String((e && e.message) || e), extensionId: EXTENSION_ID }));
     return true;
   }
   if (msg.type === 'GCAL_SYNC_NOW') {
@@ -165,7 +170,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         let token = await getTokenSilently();
         if (!token) token = await getTokenInteractive();
-        if (!token) { sendResponse({ ok: false, error: 'No token (login required)' }); return; }
+        if (!token) { sendResponse({ ok: false, error: lastAuthError ? `Google sign-in failed: ${lastAuthError}` : 'No token (login required)' }); return; }
         const storedObj = await new Promise(r => chrome.storage.local.get({ pronoteItems: [], recurringEvents: [], planOverrides: {} }, r));
         const items = storedObj.pronoteItems || [];
         const recurring = storedObj.recurringEvents || [];
@@ -1027,8 +1032,18 @@ async function preloadExistingEvents(token, calendarId, rows) {
 }
 
 // Google Calendar helpers
-function getTokenInteractive() { return new Promise(res => chrome.identity.getAuthToken({ interactive: true }, t => res(chrome.runtime.lastError ? null : t))); }
-function getTokenSilently() { return new Promise(res => chrome.identity.getAuthToken({ interactive: false }, t => res(chrome.runtime.lastError ? null : t))); }
+function getAuthToken(interactive) {
+  return new Promise(res => chrome.identity.getAuthToken({ interactive }, t => {
+    // chrome.runtime.lastError MUST be read inside the callback or Chrome logs it as
+    // an unchecked error. Keep the message: it is the only clue the user ever gets
+    // (e.g. "bad client id", "OAuth2 not granted or revoked", "user did not approve").
+    const err = chrome.runtime.lastError;
+    lastAuthError = err ? String(err.message || 'unknown auth error') : '';
+    res(lastAuthError || !t ? null : t);
+  }));
+}
+function getTokenInteractive() { return getAuthToken(true); }
+function getTokenSilently() { return getAuthToken(false); }
 function tzOffsetStr(d) { const mins = -d.getTimezoneOffset(); const s = mins >= 0 ? '+' : '-'; const a = Math.abs(mins); const hh = String(Math.floor(a / 60)).padStart(2, '0'); const mm = String(a % 60).padStart(2, '0'); return `${s}${hh}:${mm}`; }
 function rfc3339Local(date, hour = 18, minute = 0) { const [y, m, d] = date.split('-').map(x => parseInt(x, 10)); const dt = new Date(y, m - 1, d, hour, minute, 0); const off = tzOffsetStr(dt); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}:00${off}`; }
 function addMinutesRfc3339(start, minutes) {
