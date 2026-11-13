@@ -482,6 +482,13 @@ function showOnboarding() {
     return { title, time, duration, days };
   }
 
+  // Every exit from the modal must record that onboarding was seen, or the welcome
+  // window reappears on the next load. The X and the backdrop used to only hide it.
+  function dismissOnboarding() {
+    localSet({ [ONBOARDING_KEY]: true });
+    modal.classList.add('hidden');
+  }
+
   nextBtn?.addEventListener('click', () => {
     try { steps[step].collect(); } catch (e) { logStorageError('onboarding-collect-next', e); }
     if (step < steps.length - 1) {
@@ -493,13 +500,7 @@ function showOnboarding() {
     }
   });
   skipBtn?.addEventListener('click', () => {
-    if (step < steps.length - 1) {
-      step += 1;
-      renderStep();
-    } else {
-      localSet({ [ONBOARDING_KEY]: true });
-      modal.classList.add('hidden');
-    }
+    dismissOnboarding();
   });
   backBtn?.addEventListener('click', () => {
     if (step <= 0) return;
@@ -508,8 +509,8 @@ function showOnboarding() {
     renderStep();
   });
 
-  modal.querySelector('#onboarding-close')?.addEventListener('click', () => modal.classList.add('hidden'));
-  modal.querySelector('.modal-backdrop')?.addEventListener('click', () => modal.classList.add('hidden'));
+  modal.querySelector('#onboarding-close')?.addEventListener('click', () => dismissOnboarding());
+  modal.querySelector('.modal-backdrop')?.addEventListener('click', () => dismissOnboarding());
 
   renderStep();
 }
